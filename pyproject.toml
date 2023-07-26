@@ -1,0 +1,112 @@
+[tool.poetry]
+name = "depcalc"
+version = "0.1.0"
+description = "Use typed Python objects to represent files and directories."
+authors = ["Jesper Nielsen <jespernielsen1982+depcalc@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+homepage = "https://github.com/jesnie/depcalc"
+repository = "https://github.com/jesnie/depcalc"
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Typing :: Typed",
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+[tool.poetry.group.dev.dependencies]
+black = ">= 23.0.0"
+isort = ">= 5.12.0"
+mypy = ">= 1.0.0"
+pylint = ">= 2.16.0"
+pytest = ">= 7.2.0"
+taskipy = ">= 1.10.0"
+toml = "^0.10.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.isort]
+py_version = 310
+profile = "black"
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+
+[tool.mypy]
+python_version = "3.10"
+show_error_codes = true
+# First we turn on *all the checks*, and then we turn off those that are too annoying.
+strict = true
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+module = [
+    "_pytest.*",
+    "pytest.*",
+    "toml.*",
+]
+ignore_missing_imports = true
+
+
+[tool.pylint.messages_control]
+max-line-length = 100
+disable = [
+  "duplicate-code",
+  "fixme",
+  "global-statement",
+  "invalid-name",
+  "missing-class-docstring",
+  "missing-function-docstring",
+  "missing-module-docstring",
+  "no-else-return",
+  "no-member",
+  "too-few-public-methods",
+  "unhashable-member",
+  "unused-argument",
+]
+
+[tool.taskipy.tasks]
+isort = """
+    echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX isort XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    isort depcalc tests set_version.py
+"""
+isort_check = """
+    echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX isort XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    isort --check-only depcalc tests set_version.py
+"""
+black = """
+    echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX black XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    black depcalc tests set_version.py
+"""
+black_check = """
+    echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX black XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    black --check depcalc tests set_version.py
+"""
+mypy = """
+    echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX mypy XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    mypy depcalc tests set_version.py
+"""
+pylint = """
+    echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX pylint XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    pylint depcalc tests set_version.py
+"""
+pytest = """
+    echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX pytest XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    pytest tests
+"""
+
+format = "task isort && task black"
+format_check = "task isort_check && task black_check"
+lint = "task format_check && task mypy && task pylint"
+test = "task lint && task pytest"
+format_and_test = "task format && task test"
