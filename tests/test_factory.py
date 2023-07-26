@@ -1,7 +1,12 @@
 import pytest
 
 import depcalc.factory as f
-from depcalc.lazy import LazyRequirement, get_lazy_specifier, get_marker
+from depcalc.lazy import (
+    LazyRequirement,
+    RawLazyReleaseSet,
+    get_lazy_specifier,
+    get_marker,
+)
 from depcalc.versiontoken import VersionToken
 
 
@@ -77,3 +82,8 @@ def test_version() -> None:
 )
 def test_factories(requirement: LazyRequirement, expected: LazyRequirement) -> None:
     assert requirement == expected
+
+
+def test_releases() -> None:
+    assert RawLazyReleaseSet(None) == f.releases()
+    assert RawLazyReleaseSet("depcalc") == f.releases("depcalc")

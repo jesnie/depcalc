@@ -57,10 +57,21 @@ class EagerLazyReleaseSet(LazyReleaseSet):
         )
 
 
+@dataclass(order=True, frozen=True)
+class RawLazyReleaseSet(LazyReleaseSet):
+    package: str | None
+
+    def resolve(self, context: PackageContext) -> ReleaseSet:
+        package = self.package or context.package
+        return context.releases(package)
+
+
 AnyReleaseSet: TypeAlias = AnyRelease | ReleaseSet | LazyReleaseSet
 
 
-def get_lazy_release_set(release_set: AnyReleaseSet) -> LazyReleaseSet:
+def get_lazy_release_set(release_set: AnyReleaseSet | None) -> LazyReleaseSet:
+    if release_set is None:
+        release_set = RawLazyReleaseSet(None)
     if isinstance(release_set, Release):
         release_set = EagerLazyRelease(release_set)
     if isinstance(release_set, LazyRelease):
@@ -120,6 +131,18 @@ class SpecifierOperator(Enum):
     LE = "<="
     GE = ">="
     ARBITRARY_EQ = "==="
+
+    def __lt__(self, other: SpecifierOperator) -> bool:
+        return self.value < other.value
+
+    def __gt__(self, other: SpecifierOperator) -> bool:
+        return self.value > other.value
+
+    def __le__(self, other: SpecifierOperator) -> bool:
+        return self.value <= other.value
+
+    def __ge__(self, other: SpecifierOperator) -> bool:
+        return self.value >= other.value
 
 
 AnySpecifierOperator: TypeAlias = str | SpecifierOperator

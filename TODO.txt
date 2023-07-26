@@ -1,0 +1,21 @@
+* Faster Python release count?
+* Count releases.
+* `now` in context.
+* `add_prelease` in context.
+* Support months and years.
+* Self hosted.
+* Support tensorflow_probability -> Python version.
+* Test everything.
+* Document everything.
+
+
+Alternatives:
+- https://github.com/dependabot
+- https://docs.renovatebot.com/python/
+
+Reference:
+https://peps.python.org/pep-0440/
+https://packaging.pypa.io/en/stable/specifiers.html
+
+Example:
+https://matplotlib.org/stable/devel/min_dep_policy.html
