@@ -1,7 +1,9 @@
 from depcalc.lazy import (
     AnyMarker,
     AnySpecifier,
+    LazyReleaseSet,
     LazyRequirement,
+    RawLazyReleaseSet,
     get_lazy_specifier,
     get_marker,
 )
@@ -62,3 +64,7 @@ def marker(value: AnyMarker) -> LazyRequirement:
         specifier=set(),
         marker=get_marker(value),
     )
+
+
+def releases(package: str | None = None) -> LazyReleaseSet:  # pylint: disable=redefined-outer-name
+    return RawLazyReleaseSet(package)

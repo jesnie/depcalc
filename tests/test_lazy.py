@@ -26,6 +26,7 @@ from depcalc.lazy import (
     LazyRequirement,
     LazySpecifier,
     LazyVersion,
+    RawLazyReleaseSet,
     ReleaseLazyVersion,
     SpecifierOperator,
     get_lazy_release,
@@ -44,8 +45,7 @@ def test_eager_lazy_release() -> None:
         package="depcalc",
         version=Version("3.1.2"),
         released_time=dt.datetime(2023, 8, 7, 2, 1),
-        superseded_time=None,
-        requires_python=set(),
+        successor=None,
     )
     lazy = EagerLazyRelease(release)
 
@@ -61,16 +61,14 @@ def test_eager_lazy_release() -> None:
                 package="depcalc",
                 version=Version("1.1.0"),
                 released_time=dt.datetime(2023, 8, 7, 13, 45),
-                superseded_time=None,
-                requires_python=set(),
+                successor=None,
             ),
             EagerLazyRelease(
                 Release(
                     package="depcalc",
                     version=Version("1.1.0"),
                     released_time=dt.datetime(2023, 8, 7, 13, 45),
-                    superseded_time=None,
-                    requires_python=set(),
+                    successor=None,
                 ),
             ),
         ),
@@ -80,8 +78,7 @@ def test_eager_lazy_release() -> None:
                     package="depcalc",
                     version=Version("1.2.0"),
                     released_time=dt.datetime(2023, 8, 7, 13, 45),
-                    superseded_time=None,
-                    requires_python=set(),
+                    successor=None,
                 ),
             ),
             EagerLazyRelease(
@@ -89,8 +86,7 @@ def test_eager_lazy_release() -> None:
                     package="depcalc",
                     version=Version("1.2.0"),
                     released_time=dt.datetime(2023, 8, 7, 13, 45),
-                    superseded_time=None,
-                    requires_python=set(),
+                    successor=None,
                 ),
             ),
         ),
@@ -109,19 +105,17 @@ def test_eager_lazy_release_set__empty() -> None:
 
 
 def test_eager_lazy_release_set() -> None:
-    release_1 = Release(
-        package="depcalc",
-        version=Version("1.1.0"),
-        released_time=dt.datetime(2023, 8, 7, 13, 45),
-        superseded_time=dt.datetime(2023, 8, 7, 14, 11),
-        requires_python=set(),
-    )
     release_2 = Release(
         package="depcalc",
         version=Version("1.2.0"),
         released_time=dt.datetime(2023, 8, 7, 14, 11),
-        superseded_time=None,
-        requires_python=set(),
+        successor=None,
+    )
+    release_1 = Release(
+        package="depcalc",
+        version=Version("1.1.0"),
+        released_time=dt.datetime(2023, 8, 7, 13, 45),
+        successor=release_2,
     )
 
     lazy = EagerLazyReleaseSet({get_lazy_release(release_1), get_lazy_release(release_2)})
@@ -131,16 +125,43 @@ def test_eager_lazy_release_set() -> None:
     assert ReleaseSet("depcalc", {release_1, release_2}) == lazy.resolve(context)
 
 
+def test_raw_lazy_release_set() -> None:
+    releases = MagicMock(ReleaseSet)
+
+    lazy = RawLazyReleaseSet(None)
+    context = MagicMock(PackageContext)
+    context.package = "depcalc"
+    context.releases.return_value = releases
+
+    assert releases == lazy.resolve(context)
+    context.releases.assert_called_once_with("depcalc")
+
+
+def test_raw_lazy_release_set__package() -> None:
+    releases = MagicMock(ReleaseSet)
+
+    lazy = RawLazyReleaseSet("foo")
+    context = MagicMock(PackageContext)
+    context.package = "depcalc"
+    context.releases.return_value = releases
+
+    assert releases == lazy.resolve(context)
+    context.releases.assert_called_once_with("foo")
+
+
 @pytest.mark.parametrize(
     "release_set,expected",
     [
+        (
+            None,
+            RawLazyReleaseSet(None),
+        ),
         (
             Release(
                 package="depcalc",
                 version=Version("1.1.0"),
                 released_time=dt.datetime(2023, 8, 7, 13, 45),
-                superseded_time=None,
-                requires_python=set(),
+                successor=None,
             ),
             EagerLazyReleaseSet(
                 {
@@ -149,8 +170,7 @@ def test_eager_lazy_release_set() -> None:
                             package="depcalc",
                             version=Version("1.1.0"),
                             released_time=dt.datetime(2023, 8, 7, 13, 45),
-                            superseded_time=None,
-                            requires_python=set(),
+                            successor=None,
                         ),
                     )
                 }
@@ -162,8 +182,7 @@ def test_eager_lazy_release_set() -> None:
                     package="depcalc",
                     version=Version("1.2.0"),
                     released_time=dt.datetime(2023, 8, 7, 13, 45),
-                    superseded_time=None,
-                    requires_python=set(),
+                    successor=None,
                 ),
             ),
             EagerLazyReleaseSet(
@@ -173,8 +192,7 @@ def test_eager_lazy_release_set() -> None:
                             package="depcalc",
                             version=Version("1.2.0"),
                             released_time=dt.datetime(2023, 8, 7, 13, 45),
-                            superseded_time=None,
-                            requires_python=set(),
+                            successor=None,
                         ),
                     )
                 }
@@ -192,15 +210,13 @@ def test_eager_lazy_release_set() -> None:
                         package="depcalc",
                         version=Version("1.3.0"),
                         released_time=dt.datetime(2023, 8, 7, 13, 45),
-                        superseded_time=dt.datetime(2023, 8, 7, 14, 23),
-                        requires_python=set(),
+                        successor=None,
                     ),
                     Release(
                         package="depcalc",
                         version=Version("1.4.0"),
                         released_time=dt.datetime(2023, 8, 7, 14, 23),
-                        superseded_time=None,
-                        requires_python=set(),
+                        successor=None,
                     ),
                 },
             ),
@@ -211,8 +227,7 @@ def test_eager_lazy_release_set() -> None:
                             package="depcalc",
                             version=Version("1.3.0"),
                             released_time=dt.datetime(2023, 8, 7, 13, 45),
-                            superseded_time=dt.datetime(2023, 8, 7, 14, 23),
-                            requires_python=set(),
+                            successor=None,
                         ),
                     ),
                     EagerLazyRelease(
@@ -220,8 +235,7 @@ def test_eager_lazy_release_set() -> None:
                             package="depcalc",
                             version=Version("1.4.0"),
                             released_time=dt.datetime(2023, 8, 7, 14, 23),
-                            superseded_time=None,
-                            requires_python=set(),
+                            successor=None,
                         ),
                     ),
                 }
@@ -239,8 +253,7 @@ def test_eager_lazy_release_set() -> None:
                             package="depcalc",
                             version=Version("1.5.0"),
                             released_time=dt.datetime(2023, 8, 7, 13, 45),
-                            superseded_time=dt.datetime(2023, 8, 7, 14, 23),
-                            requires_python=set(),
+                            successor=None,
                         ),
                     ),
                     EagerLazyRelease(
@@ -248,8 +261,7 @@ def test_eager_lazy_release_set() -> None:
                             package="depcalc",
                             version=Version("1.6.0"),
                             released_time=dt.datetime(2023, 8, 7, 14, 23),
-                            superseded_time=None,
-                            requires_python=set(),
+                            successor=None,
                         ),
                     ),
                 },
@@ -261,8 +273,7 @@ def test_eager_lazy_release_set() -> None:
                             package="depcalc",
                             version=Version("1.5.0"),
                             released_time=dt.datetime(2023, 8, 7, 13, 45),
-                            superseded_time=dt.datetime(2023, 8, 7, 14, 23),
-                            requires_python=set(),
+                            successor=None,
                         ),
                     ),
                     EagerLazyRelease(
@@ -270,8 +281,7 @@ def test_eager_lazy_release_set() -> None:
                             package="depcalc",
                             version=Version("1.6.0"),
                             released_time=dt.datetime(2023, 8, 7, 14, 23),
-                            superseded_time=None,
-                            requires_python=set(),
+                            successor=None,
                         ),
                     ),
                 }
@@ -298,8 +308,7 @@ def test_release_lazy_version() -> None:
             package="depcalc",
             version=version,
             released_time=dt.datetime(2023, 8, 7, 2, 1),
-            superseded_time=None,
-            requires_python=set(),
+            successor=None,
         )
     )
     lazy = ReleaseLazyVersion(release)
@@ -317,8 +326,7 @@ def test_release_lazy_version() -> None:
                 package="depcalc",
                 version=Version("1.1.0"),
                 released_time=dt.datetime(2023, 8, 7, 13, 45),
-                superseded_time=None,
-                requires_python=set(),
+                successor=None,
             ),
             EagerLazyVersion(Version("1.1.0")),
         ),
@@ -328,8 +336,7 @@ def test_release_lazy_version() -> None:
                     package="depcalc",
                     version=Version("1.2.0"),
                     released_time=dt.datetime(2023, 8, 7, 13, 45),
-                    superseded_time=None,
-                    requires_python=set(),
+                    successor=None,
                 )
             ),
             ReleaseLazyVersion(
@@ -338,8 +345,7 @@ def test_release_lazy_version() -> None:
                         package="depcalc",
                         version=Version("1.2.0"),
                         released_time=dt.datetime(2023, 8, 7, 13, 45),
-                        superseded_time=None,
-                        requires_python=set(),
+                        successor=None,
                     )
                 )
             ),
