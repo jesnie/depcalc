@@ -2,9 +2,13 @@ import pytest
 
 import depcalc.factory as f
 from depcalc.lazy import (
+    DevLazyReleaseSet,
     LazyRequirement,
-    RawLazyReleaseSet,
+    LazySpecifierSet,
+    PreLazyReleaseSet,
+    ProdLazyReleaseSet,
     get_lazy_specifier,
+    get_lazy_specifier_set,
     get_marker,
 )
 from depcalc.versiontoken import VersionToken
@@ -24,7 +28,7 @@ def test_version() -> None:
                 package="depcalc",
                 url=None,
                 extras=set(),
-                specifier=set(),
+                specifier=LazySpecifierSet(set()),
                 marker=None,
             ),
         ),
@@ -34,7 +38,7 @@ def test_version() -> None:
                 package="depcalc",
                 url=None,
                 extras=set(),
-                specifier=set(),
+                specifier=LazySpecifierSet(set()),
                 marker=None,
             ),
         ),
@@ -44,7 +48,7 @@ def test_version() -> None:
                 package=None,
                 url="http://path/v1.2.3",
                 extras=set(),
-                specifier=set(),
+                specifier=LazySpecifierSet(set()),
                 marker=None,
             ),
         ),
@@ -54,19 +58,17 @@ def test_version() -> None:
                 package=None,
                 url=None,
                 extras={"extra"},
-                specifier=set(),
+                specifier=LazySpecifierSet(set()),
                 marker=None,
             ),
         ),
         (
             f.specifier(">=1.2.3"),
-            LazyRequirement(
-                package=None,
-                url=None,
-                extras=set(),
-                specifier={get_lazy_specifier(">=1.2.3")},
-                marker=None,
-            ),
+            get_lazy_specifier(">=1.2.3"),
+        ),
+        (
+            f.specifier_set(">=1.2.3,<2.0.0"),
+            get_lazy_specifier_set(">=1.2.3,<2.0.0"),
         ),
         (
             f.marker("python_version=='1.2.3'"),
@@ -74,7 +76,7 @@ def test_version() -> None:
                 package=None,
                 url=None,
                 extras=set(),
-                specifier=set(),
+                specifier=LazySpecifierSet(set()),
                 marker=get_marker("python_version=='1.2.3'"),
             ),
         ),
@@ -85,5 +87,9 @@ def test_factories(requirement: LazyRequirement, expected: LazyRequirement) -> N
 
 
 def test_releases() -> None:
-    assert RawLazyReleaseSet(None) == f.releases()
-    assert RawLazyReleaseSet("depcalc") == f.releases("depcalc")
+    assert ProdLazyReleaseSet(None) == f.releases()
+    assert ProdLazyReleaseSet("depcalc") == f.releases("depcalc")
+    assert PreLazyReleaseSet(None) == f.prereleases()
+    assert PreLazyReleaseSet("depcalc") == f.prereleases("depcalc")
+    assert DevLazyReleaseSet(None) == f.devreleases()
+    assert DevLazyReleaseSet("depcalc") == f.devreleases("depcalc")

@@ -1,13 +1,7 @@
-import datetime as dt
-
 from packaging.version import Version
 
-from depcalc.release import (
-    Release,
-    ReleaseSet,
-    infer_and_set_successor,
-    infer_successor,
-)
+from depcalc.release import ReleaseSet, infer_and_set_successor, infer_successor
+from tests.utils import fake_release
 
 
 def test_infer_successor() -> None:
@@ -53,48 +47,13 @@ def test_infer_successor() -> None:
 
 
 def test_infer_superseded() -> None:
-    before_r220a2dev1 = Release(
-        package="depcalc",
-        version=Version("2.2.0a2dev1"),
-        released_time=dt.datetime(2023, 8, 9, 12, 37),
-        successor=None,
-    )
-    before_r220a1 = Release(
-        package="depcalc",
-        version=Version("2.2.0a1"),
-        released_time=dt.datetime(2023, 8, 9, 12, 36),
-        successor=None,
-    )
-    before_r210 = Release(
-        package="depcalc",
-        version=Version("2.1.0"),
-        released_time=dt.datetime(2023, 8, 9, 12, 35),
-        successor=None,
-    )
-    before_r210a2 = Release(
-        package="depcalc",
-        version=Version("2.1.0a2"),
-        released_time=dt.datetime(2023, 8, 9, 12, 34),
-        successor=None,
-    )
-    before_r210a2dev1 = Release(
-        package="depcalc",
-        version=Version("2.1.0a2dev1"),
-        released_time=dt.datetime(2023, 8, 9, 12, 33),
-        successor=None,
-    )
-    before_r210a1 = Release(
-        package="depcalc",
-        version=Version("2.1.0a1"),
-        released_time=dt.datetime(2023, 8, 9, 12, 32),
-        successor=None,
-    )
-    before_r200 = Release(
-        package="depcalc",
-        version=Version("2.0.0"),
-        released_time=dt.datetime(2023, 8, 9, 12, 31),
-        successor=None,
-    )
+    before_r220a2dev1 = fake_release(version="2.2.0a2dev1", successor=None)
+    before_r220a1 = fake_release(version="2.2.0a1", successor=None)
+    before_r210 = fake_release(version="2.1.0", successor=None)
+    before_r210a2 = fake_release(version="2.1.0a2", successor=None)
+    before_r210a2dev1 = fake_release(version="2.1.0a2dev1", successor=None)
+    before_r210a1 = fake_release(version="2.1.0a1", successor=None)
+    before_r200 = fake_release(version="2.0.0", successor=None)
     before = ReleaseSet(
         "depcalc",
         {
@@ -108,48 +67,13 @@ def test_infer_superseded() -> None:
         },
     )
 
-    after_r220a2dev1 = Release(
-        package="depcalc",
-        version=Version("2.2.0a2dev1"),
-        released_time=dt.datetime(2023, 8, 9, 12, 37),
-        successor=None,
-    )
-    after_r220a1 = Release(
-        package="depcalc",
-        version=Version("2.2.0a1"),
-        released_time=dt.datetime(2023, 8, 9, 12, 36),
-        successor=None,
-    )
-    after_r210 = Release(
-        package="depcalc",
-        version=Version("2.1.0"),
-        released_time=dt.datetime(2023, 8, 9, 12, 35),
-        successor=None,
-    )
-    after_r210a2 = Release(
-        package="depcalc",
-        version=Version("2.1.0a2"),
-        released_time=dt.datetime(2023, 8, 9, 12, 34),
-        successor=after_r210,
-    )
-    after_r210a2dev1 = Release(
-        package="depcalc",
-        version=Version("2.1.0a2dev1"),
-        released_time=dt.datetime(2023, 8, 9, 12, 33),
-        successor=after_r210a2,
-    )
-    after_r210a1 = Release(
-        package="depcalc",
-        version=Version("2.1.0a1"),
-        released_time=dt.datetime(2023, 8, 9, 12, 32),
-        successor=after_r210a2,
-    )
-    after_r200 = Release(
-        package="depcalc",
-        version=Version("2.0.0"),
-        released_time=dt.datetime(2023, 8, 9, 12, 31),
-        successor=after_r210,
-    )
+    after_r220a2dev1 = fake_release(version="2.2.0a2dev1", successor=None)
+    after_r220a1 = fake_release(version="2.2.0a1", successor=None)
+    after_r210 = fake_release(version="2.1.0", successor=None)
+    after_r210a2 = fake_release(version="2.1.0a2", successor=after_r210)
+    after_r210a2dev1 = fake_release(version="2.1.0a2dev1", successor=after_r210a2)
+    after_r210a1 = fake_release(version="2.1.0a1", successor=after_r210a2)
+    after_r200 = fake_release(version="2.0.0", successor=after_r210)
     after = ReleaseSet(
         "depcalc",
         {

@@ -1,10 +1,19 @@
+from dataclasses import replace
+
 from depcalc.lazy import (
+    EMPTY_REQUIREMENT,
     AnyMarker,
     AnySpecifier,
+    AnySpecifierSet,
+    DevLazyReleaseSet,
     LazyReleaseSet,
     LazyRequirement,
-    RawLazyReleaseSet,
+    LazySpecifier,
+    LazySpecifierSet,
+    PreLazyReleaseSet,
+    ProdLazyReleaseSet,
     get_lazy_specifier,
+    get_lazy_specifier_set,
     get_marker,
 )
 from depcalc.versiontoken import VersionToken
@@ -14,57 +23,44 @@ v = version
 
 
 def package(value: str) -> LazyRequirement:
-    return LazyRequirement(
-        package=value,
-        url=None,
-        extras=set(),
-        specifier=set(),
-        marker=None,
-    )
+    return replace(EMPTY_REQUIREMENT, package=value)
 
 
-pkg = package
+def pkg(value: str) -> LazyRequirement:
+    return replace(EMPTY_REQUIREMENT, package=value)
 
 
 def url(value: str) -> LazyRequirement:
-    return LazyRequirement(
-        package=None,
-        url=value,
-        extras=set(),
-        specifier=set(),
-        marker=None,
-    )
+    return replace(EMPTY_REQUIREMENT, url=value)
 
 
 def extra(value: str) -> LazyRequirement:
-    return LazyRequirement(
-        package=None,
-        url=None,
-        extras={value},
-        specifier=set(),
-        marker=None,
-    )
+    return replace(EMPTY_REQUIREMENT, extras={value})
 
 
-def specifier(value: AnySpecifier) -> LazyRequirement:
-    return LazyRequirement(
-        package=None,
-        url=None,
-        extras=set(),
-        specifier={get_lazy_specifier(value)},
-        marker=None,
-    )
+def specifier(value: AnySpecifier) -> LazySpecifier:
+    return get_lazy_specifier(value)
+
+
+def specifier_set(value: AnySpecifierSet) -> LazySpecifierSet:
+    return get_lazy_specifier_set(value)
 
 
 def marker(value: AnyMarker) -> LazyRequirement:
-    return LazyRequirement(
-        package=None,
-        url=None,
-        extras=set(),
-        specifier=set(),
-        marker=get_marker(value),
-    )
+    return replace(EMPTY_REQUIREMENT, marker=get_marker(value))
 
 
 def releases(package: str | None = None) -> LazyReleaseSet:  # pylint: disable=redefined-outer-name
-    return RawLazyReleaseSet(package)
+    return ProdLazyReleaseSet(package)
+
+
+def prereleases(
+    package: str | None = None,  # pylint: disable=redefined-outer-name
+) -> LazyReleaseSet:
+    return PreLazyReleaseSet(package)
+
+
+def devreleases(
+    package: str | None = None,  # pylint: disable=redefined-outer-name
+) -> LazyReleaseSet:
+    return DevLazyReleaseSet(package)
