@@ -2,10 +2,13 @@
 * Count releases.
 * `now` in context.
 * Support months and years.
-* Self hosted.
+* Update GitHub actions.
+* GitHub action for keeping up-to-date.
 * Support tensorflow_probability -> Python version.
 * Test everything.
 * Document everything.
+* Support Poetry version syntax?
+* Relative min/max/index
 
 
 Alternatives:
@@ -14,7 +17,7 @@ Alternatives:
 
 Reference:
 https://peps.python.org/pep-0440/
-https://packaging.pypa.io/en/stable/specifiers.html
+https://packaging.pypa.io/en/stable
 
 Example:
 https://matplotlib.org/stable/devel/min_dep_policy.html
