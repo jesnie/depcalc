@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from itertools import chain
-from typing import AbstractSet, TypeAlias
+from typing import AbstractSet, TypeAlias, overload
 
 from packaging.markers import Marker
 from packaging.requirements import Requirement
@@ -58,7 +58,37 @@ class EagerLazyReleaseSet(LazyReleaseSet):
 
 
 @dataclass(order=True, frozen=True)
-class RawLazyReleaseSet(LazyReleaseSet):
+class ProdLazyReleaseSet(LazyReleaseSet):
+    package: str | None
+
+    def resolve(self, context: PackageContext) -> ReleaseSet:
+        package = self.package or context.package
+        release_set = context.releases(package)
+        return ReleaseSet(
+            package=release_set.package,
+            releases={
+                r
+                for r in release_set.releases
+                if not (r.version.is_prerelease or r.version.is_devrelease)
+            },
+        )
+
+
+@dataclass(order=True, frozen=True)
+class PreLazyReleaseSet(LazyReleaseSet):
+    package: str | None
+
+    def resolve(self, context: PackageContext) -> ReleaseSet:
+        package = self.package or context.package
+        release_set = context.releases(package)
+        return ReleaseSet(
+            package=release_set.package,
+            releases={r for r in release_set.releases if not r.version.is_devrelease},
+        )
+
+
+@dataclass(order=True, frozen=True)
+class DevLazyReleaseSet(LazyReleaseSet):
     package: str | None
 
     def resolve(self, context: PackageContext) -> ReleaseSet:
@@ -71,7 +101,7 @@ AnyReleaseSet: TypeAlias = AnyRelease | ReleaseSet | LazyReleaseSet
 
 def get_lazy_release_set(release_set: AnyReleaseSet | None) -> LazyReleaseSet:
     if release_set is None:
-        release_set = RawLazyReleaseSet(None)
+        release_set = ProdLazyReleaseSet(None)
     if isinstance(release_set, Release):
         release_set = EagerLazyRelease(release_set)
     if isinstance(release_set, LazyRelease):
@@ -166,11 +196,27 @@ class LazySpecifier:
         version = self.version.resolve(context)
         return Specifier(f"{op.value}{version}")
 
-    def __and__(self, rhs: AnyRequirement) -> LazyRequirement:
-        return LazyRequirement.compose(self, rhs)
+    @overload
+    def __and__(self, rhs: AnySpecifierSet) -> LazySpecifierSet:
+        ...
 
-    def __rand__(self, lhs: AnyRequirement) -> LazyRequirement:
-        return LazyRequirement.compose(lhs, self)
+    @overload
+    def __and__(self, rhs: Requirement | LazyRequirement) -> LazyRequirement:
+        ...
+
+    def __and__(self, rhs: AnyRequirement) -> LazySpecifierSet | LazyRequirement:
+        return compose(self, rhs)
+
+    @overload
+    def __rand__(self, lhs: AnySpecifierSet) -> LazySpecifierSet:
+        ...
+
+    @overload
+    def __rand__(self, lhs: Requirement | LazyRequirement) -> LazyRequirement:
+        ...
+
+    def __rand__(self, lhs: AnyRequirement) -> LazySpecifierSet | LazyRequirement:
+        return compose(lhs, self)
 
 
 AnySpecifier: TypeAlias = str | Specifier | LazySpecifier
@@ -186,6 +232,54 @@ def get_lazy_specifier(specifier: AnySpecifier) -> LazySpecifier:
     if isinstance(specifier, LazySpecifier):
         return specifier
     raise AssertionError(f"Unknown type of specifier: {type(specifier)}")
+
+
+@dataclass(frozen=True)
+class LazySpecifierSet:
+    specifiers: AbstractSet[LazySpecifier]
+
+    def resolve(self, context: PackageContext) -> SpecifierSet:
+        specifiers = [s.resolve(context) for s in self.specifiers]
+        return SpecifierSet(",".join(str(s) for s in specifiers))
+
+    @overload
+    def __and__(self, rhs: AnySpecifierSet) -> LazySpecifierSet:
+        ...
+
+    @overload
+    def __and__(self, rhs: Requirement | LazyRequirement) -> LazyRequirement:
+        ...
+
+    def __and__(self, rhs: AnyRequirement) -> LazySpecifierSet | LazyRequirement:
+        return compose(self, rhs)
+
+    @overload
+    def __rand__(self, lhs: AnySpecifierSet) -> LazySpecifierSet:
+        ...
+
+    @overload
+    def __rand__(self, lhs: Requirement | LazyRequirement) -> LazyRequirement:
+        ...
+
+    def __rand__(self, lhs: AnyRequirement) -> LazySpecifierSet | LazyRequirement:
+        return compose(lhs, self)
+
+
+AnySpecifierSet: TypeAlias = str | Specifier | LazySpecifier | SpecifierSet | LazySpecifierSet
+
+
+def get_lazy_specifier_set(specifier_set: AnySpecifierSet) -> LazySpecifierSet:
+    if isinstance(specifier_set, str):
+        specifier_set = SpecifierSet(specifier_set)
+    if isinstance(specifier_set, Specifier):
+        specifier_set = get_lazy_specifier(specifier_set)
+    if isinstance(specifier_set, LazySpecifier):
+        specifier_set = LazySpecifierSet({specifier_set})
+    if isinstance(specifier_set, SpecifierSet):
+        specifier_set = LazySpecifierSet({get_lazy_specifier(s) for s in specifier_set})
+    if isinstance(specifier_set, LazySpecifierSet):
+        return specifier_set
+    raise AssertionError(f"Unknown type of specifier set: {type(specifier_set)}")
 
 
 AnyMarker: TypeAlias = str | Marker
@@ -204,53 +298,20 @@ class LazyRequirement:
     package: str | None
     url: str | None
     extras: AbstractSet[str]
-    specifier: AbstractSet[LazySpecifier]
+    specifier: LazySpecifierSet
     marker: Marker | None
 
     def __post_init__(self) -> None:
-        assert (self.url is None) or not self.specifier, (
+        assert (self.url is None) or not self.specifier.specifiers, (
             "A requirement cannot have both a url and a specifier."
             f" Found: {self.url}, {self.specifier}."
         )
 
-    @staticmethod
-    def compose(lhs: AnyRequirement, rhs: AnyRequirement) -> LazyRequirement:
-        lhr = get_lazy_requirement(lhs)
-        rhr = get_lazy_requirement(rhs)
-
-        assert lhr.package is None or rhr.package is None or lhr.package == rhr.package, (
-            "A requirement can have at most one package name."
-            f" Found: {lhr.package} and {rhr.package}."
-        )
-        assert (
-            lhr.url is None or rhr.url is None or lhr.url == rhr.url
-        ), f"A requirement can have at most one url. Found: {lhr.url} and {rhr.url}."
-        package = lhr.package or rhr.package
-        url = lhr.url or rhr.url
-        extras = set(chain(lhr.extras, rhr.extras))
-        specifier = set(chain(lhr.specifier, rhr.specifier))
-        marker: Marker | None
-        if lhr.marker is None:
-            marker = rhr.marker
-        elif rhr.marker is None:
-            marker = lhr.marker
-        elif lhr.marker == rhr.marker:
-            marker = lhr.marker
-        else:
-            marker = Marker(f"({lhr.marker}) and ({rhr.marker})")
-        return LazyRequirement(
-            package=package,
-            url=url,
-            extras=extras,
-            specifier=specifier,
-            marker=marker,
-        )
-
     def __and__(self, rhs: AnyRequirement) -> LazyRequirement:
-        return LazyRequirement.compose(self, rhs)
+        return compose(self, rhs)
 
     def __rand__(self, lhs: AnyRequirement) -> LazyRequirement:
-        return LazyRequirement.compose(lhs, self)
+        return compose(lhs, self)
 
     def assert_valid(self) -> None:
         assert self.package, f"A requirement must have the package name set. Found: {self.package}."
@@ -267,8 +328,8 @@ class LazyRequirement:
             tokens.append(f"[{formatted_extras}]")
 
         package_context = context.for_package(self.package)
-        specifiers = [s.resolve(package_context) for s in sorted(self.specifier)]
-        tokens.append(",".join(str(s) for s in specifiers))
+        specifier = self.specifier.resolve(package_context)
+        tokens.append(str(specifier))
 
         if self.url:
             tokens.append(f"@ {self.url}")
@@ -281,8 +342,23 @@ class LazyRequirement:
         return Requirement("".join(tokens))
 
 
+EMPTY_REQUIREMENT = LazyRequirement(
+    package=None,
+    url=None,
+    extras=set(),
+    specifier=LazySpecifierSet(set()),
+    marker=None,
+)
+
+
 AnyRequirement: TypeAlias = (
-    str | Specifier | SpecifierSet | LazySpecifier | Requirement | LazyRequirement
+    str
+    | Specifier
+    | LazySpecifier
+    | SpecifierSet
+    | LazySpecifierSet
+    | Requirement
+    | LazyRequirement
 )
 
 
@@ -290,31 +366,76 @@ def get_lazy_requirement(requirement: AnyRequirement) -> LazyRequirement:
     if isinstance(requirement, str):
         requirement = Requirement(requirement)
     if isinstance(requirement, Specifier):
-        requirement = get_lazy_specifier(requirement)
+        requirement = get_lazy_specifier_set(requirement)
     if isinstance(requirement, LazySpecifier):
-        requirement = LazyRequirement(
-            package=None,
-            url=None,
-            extras=set(),
-            specifier={requirement},
-            marker=None,
-        )
+        requirement = get_lazy_specifier_set(requirement)
     if isinstance(requirement, SpecifierSet):
-        requirement = LazyRequirement(
-            package=None,
-            url=None,
-            extras=set(),
-            specifier={get_lazy_specifier(s) for s in requirement},
-            marker=None,
-        )
+        requirement = get_lazy_specifier_set(requirement)
+    if isinstance(requirement, LazySpecifierSet):
+        requirement = replace(EMPTY_REQUIREMENT, specifier=requirement)
     if isinstance(requirement, Requirement):
         requirement = LazyRequirement(
             package=requirement.name,
             url=requirement.url,
             extras=requirement.extras,
-            specifier={get_lazy_specifier(s) for s in requirement.specifier},
+            specifier=get_lazy_specifier_set(requirement.specifier),
             marker=requirement.marker,
         )
     if isinstance(requirement, LazyRequirement):
         return requirement
     raise AssertionError(f"Unknown type of requirement: {type(requirement)}")
+
+
+@overload
+def compose(lhs: AnySpecifierSet, rhs: AnySpecifierSet) -> LazySpecifierSet:
+    ...
+
+
+@overload
+def compose(lhs: AnyRequirement, rhs: Requirement | LazyRequirement) -> LazyRequirement:
+    ...
+
+
+@overload
+def compose(lhs: Requirement | LazyRequirement, rhs: AnyRequirement) -> LazyRequirement:
+    ...
+
+
+def compose(lhs: AnyRequirement, rhs: AnyRequirement) -> LazySpecifierSet | LazyRequirement:
+    if isinstance(lhs, (Requirement, LazyRequirement)) or isinstance(
+        rhs, (Requirement, LazyRequirement)
+    ):
+        lhr = get_lazy_requirement(lhs)
+        rhr = get_lazy_requirement(rhs)
+
+        assert lhr.package is None or rhr.package is None or lhr.package == rhr.package, (
+            "A requirement can have at most one package name."
+            f" Found: {lhr.package} and {rhr.package}."
+        )
+        assert (
+            lhr.url is None or rhr.url is None or lhr.url == rhr.url
+        ), f"A requirement can have at most one url. Found: {lhr.url} and {rhr.url}."
+        package = lhr.package or rhr.package
+        url = lhr.url or rhr.url
+        extras = set(chain(lhr.extras, rhr.extras))
+        specifier = compose(lhr.specifier, rhr.specifier)
+        marker: Marker | None
+        if lhr.marker is None:
+            marker = rhr.marker
+        elif rhr.marker is None:
+            marker = lhr.marker
+        elif lhr.marker == rhr.marker:
+            marker = lhr.marker
+        else:
+            marker = Marker(f"({lhr.marker}) and ({rhr.marker})")
+        return LazyRequirement(
+            package=package,
+            url=url,
+            extras=extras,
+            specifier=specifier,
+            marker=marker,
+        )
+    else:
+        lhss = get_lazy_specifier_set(lhs)
+        rhss = get_lazy_specifier_set(rhs)
+        return LazySpecifierSet(set(chain(lhss.specifiers, rhss.specifiers)))

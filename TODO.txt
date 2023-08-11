@@ -1,7 +1,6 @@
 * Faster Python release count?
 * Count releases.
 * `now` in context.
-* `add_prelease` in context.
 * Support months and years.
 * Self hosted.
 * Support tensorflow_probability -> Python version.

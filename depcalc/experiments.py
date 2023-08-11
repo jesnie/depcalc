@@ -16,7 +16,7 @@ def depcalc() -> None:
         dc.resolve_requirement(
             f.pkg("tensorflow")
             & f.version("<", o.ceil_ver(o.MAJOR, o.max_ver()))
-            & f.version(">=", o.floor_ver(o.MINOR, o.min_ver(o.window(days=90))))
+            & f.version(">=", o.floor_ver(o.MINOR, o.max_ver(o.min_age(days=90))))
         )
     )
 

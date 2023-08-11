@@ -87,9 +87,9 @@ def floor_ver(level: int, version: AnyVersion) -> LazyVersion:
 
 
 @dataclass(order=True, frozen=True)
-class WindowLazyReleaseSet(LazyReleaseSet):
+class MinAgeLazyReleaseSet(LazyReleaseSet):
     now: dt.datetime | None
-    horizon: dt.timedelta
+    min_age: dt.timedelta
     release_set: LazyReleaseSet
 
     def resolve(self, context: PackageContext) -> ReleaseSet:
@@ -97,19 +97,15 @@ class WindowLazyReleaseSet(LazyReleaseSet):
 
         # TODO(jesnie): Get `now` from context.
         now = dt.datetime.utcnow().replace(tzinfo=dt.timezone.utc) if self.now is None else self.now
-        min_time = now - self.horizon
+        max_time = now - self.min_age
 
         return ReleaseSet(
             package=release_set.package,
-            releases={
-                r
-                for r in release_set.releases
-                if (r.successor is None) or (r.successor.released_time >= min_time)
-            },
+            releases={r for r in release_set.releases if r.released_time <= max_time},
         )
 
 
-def window(
+def min_age(
     *,
     now: dt.datetime | None = None,
     days: int = 0,
@@ -117,9 +113,45 @@ def window(
     minutes: int = 0,
     seconds: int = 0,
     release_set: AnyReleaseSet | None = None,
-) -> LazyReleaseSet:
+) -> MinAgeLazyReleaseSet:
     # TODO(jesnie): Support months and years?
-    return WindowLazyReleaseSet(
+    return MinAgeLazyReleaseSet(
+        now,
+        dt.timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds),
+        get_lazy_release_set(release_set),
+    )
+
+
+@dataclass(order=True, frozen=True)
+class MaxAgeLazyReleaseSet(LazyReleaseSet):
+    now: dt.datetime | None
+    max_age: dt.timedelta
+    release_set: LazyReleaseSet
+
+    def resolve(self, context: PackageContext) -> ReleaseSet:
+        release_set = self.release_set.resolve(context)
+
+        # TODO(jesnie): Get `now` from context.
+        now = dt.datetime.utcnow().replace(tzinfo=dt.timezone.utc) if self.now is None else self.now
+        max_time = now - self.max_age
+
+        return ReleaseSet(
+            package=release_set.package,
+            releases={r for r in release_set.releases if r.released_time <= max_time},
+        )
+
+
+def max_age(
+    *,
+    now: dt.datetime | None = None,
+    days: int = 0,
+    hours: int = 0,
+    minutes: int = 0,
+    seconds: int = 0,
+    release_set: AnyReleaseSet | None = None,
+) -> MaxAgeLazyReleaseSet:
+    # TODO(jesnie): Support months and years?
+    return MaxAgeLazyReleaseSet(
         now,
         dt.timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds),
         get_lazy_release_set(release_set),
