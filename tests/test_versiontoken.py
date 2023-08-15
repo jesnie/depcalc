@@ -1,8 +1,8 @@
 import pytest
 from packaging.version import Version
 
-import depcalc.factory as f
-from depcalc.lazy import EagerLazyVersion, LazySpecifier, SpecifierOperator
+import compreq.factory as f
+from compreq.lazy import EagerLazyVersion, LazySpecifier, SpecifierOperator
 
 
 @pytest.mark.parametrize(
