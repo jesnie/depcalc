@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "compreq"
 version = "0.1.0"
-description = "Use typed Python objects to represent files and directories."
+description = "A library for dynamically computing Python requirements, to keep them up-to-date."
 authors = ["Jesper Nielsen <jespernielsen1982+compreq@gmail.com>"]
 license = "MIT"
 readme = "README.md"

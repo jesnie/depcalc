@@ -1,2 +1,2 @@
 # compreq
-A library for dynamically calculating Python dependencies, to keep them up-to-dat.
+A library for dynamically computing Python requirements, to keep them up-to-date.
