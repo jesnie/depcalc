@@ -1,6 +1,6 @@
 from dataclasses import replace
 
-from depcalc.lazy import (
+from compreq.lazy import (
     EMPTY_REQUIREMENT,
     AnyMarker,
     AnySpecifier,
@@ -16,7 +16,7 @@ from depcalc.lazy import (
     get_lazy_specifier_set,
     get_marker,
 )
-from depcalc.versiontoken import VersionToken
+from compreq.versiontoken import VersionToken
 
 version = VersionToken()
 v = version

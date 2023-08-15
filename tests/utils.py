@@ -3,12 +3,12 @@ from typing import Collection
 
 from packaging.version import Version
 
-from depcalc.release import Release, ReleaseSet, infer_and_set_successor
+from compreq.release import Release, ReleaseSet, infer_and_set_successor
 
 
 def fake_release(
     *,
-    package: str = "depcalc",
+    package: str = "compreq",
     version: str | Version = "1.2.3",
     released_time: dt.datetime = dt.datetime(2023, 8, 11, 12, 49),
     successor: Release | None = None,
@@ -21,7 +21,7 @@ def fake_release(
 
 def fake_release_set(
     *,
-    package: str = "depcalc",
+    package: str = "compreq",
     releases: Collection[str | Version | Release] = (),
     infer_successors: bool = True,
 ) -> ReleaseSet:

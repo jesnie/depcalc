@@ -4,8 +4,8 @@ from itertools import chain
 
 from packaging.version import Version
 
-from depcalc.context import PackageContext
-from depcalc.lazy import (
+from compreq.context import PackageContext
+from compreq.lazy import (
     AnyReleaseSet,
     AnyVersion,
     LazyRelease,
@@ -14,7 +14,7 @@ from depcalc.lazy import (
     get_lazy_release_set,
     get_lazy_version,
 )
-from depcalc.release import Release, ReleaseSet
+from compreq.release import Release, ReleaseSet
 
 MAJOR = 0
 MINOR = 1

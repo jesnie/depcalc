@@ -5,7 +5,7 @@ import requests
 from dateutil.parser import isoparse
 from packaging.version import parse
 
-from depcalc.release import Release, ReleaseSet, infer_and_set_successor
+from compreq.release import Release, ReleaseSet, infer_and_set_successor
 
 
 @cache

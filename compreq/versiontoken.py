@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from depcalc.lazy import (
+from compreq.lazy import (
     AnySpecifierOperator,
     AnyVersion,
     LazySpecifier,

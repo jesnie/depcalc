@@ -1,7 +1,7 @@
 import pytest
 
-import depcalc.factory as f
-from depcalc.lazy import (
+import compreq.factory as f
+from compreq.lazy import (
     DevLazyReleaseSet,
     LazyRequirement,
     LazySpecifierSet,
@@ -11,7 +11,7 @@ from depcalc.lazy import (
     get_lazy_specifier_set,
     get_marker,
 )
-from depcalc.versiontoken import VersionToken
+from compreq.versiontoken import VersionToken
 
 
 def test_version() -> None:
@@ -23,9 +23,9 @@ def test_version() -> None:
     "requirement,expected",
     [
         (
-            f.package("depcalc"),
+            f.package("compreq"),
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url=None,
                 extras=set(),
                 specifier=LazySpecifierSet(set()),
@@ -33,9 +33,9 @@ def test_version() -> None:
             ),
         ),
         (
-            f.pkg("depcalc"),
+            f.pkg("compreq"),
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url=None,
                 extras=set(),
                 specifier=LazySpecifierSet(set()),
@@ -88,8 +88,8 @@ def test_factories(requirement: LazyRequirement, expected: LazyRequirement) -> N
 
 def test_releases() -> None:
     assert ProdLazyReleaseSet(None) == f.releases()
-    assert ProdLazyReleaseSet("depcalc") == f.releases("depcalc")
+    assert ProdLazyReleaseSet("compreq") == f.releases("compreq")
     assert PreLazyReleaseSet(None) == f.prereleases()
-    assert PreLazyReleaseSet("depcalc") == f.prereleases("depcalc")
+    assert PreLazyReleaseSet("compreq") == f.prereleases("compreq")
     assert DevLazyReleaseSet(None) == f.devreleases()
-    assert DevLazyReleaseSet("depcalc") == f.devreleases("depcalc")
+    assert DevLazyReleaseSet("compreq") == f.devreleases("compreq")

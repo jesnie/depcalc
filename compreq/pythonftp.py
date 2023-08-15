@@ -89,7 +89,7 @@ class FtpDir(FtpPath):
         raise AssertionError(f"{self!r} is not a file.")
 
     def __repr__(self) -> str:
-        return f"depcalc.pythonftp.FtpDir({self.path_str!r}, {self.modified!r})"
+        return f"compreq.pythonftp.FtpDir({self.path_str!r}, {self.modified!r})"
 
 
 class FtpFile(FtpPath):
@@ -112,7 +112,7 @@ class FtpFile(FtpPath):
         return self
 
     def __repr__(self) -> str:
-        return f"depcalc.pythonftp.FtpFile({self.path_str!r}, {self.modified!r}, {self.size!r})"
+        return f"compreq.pythonftp.FtpFile({self.path_str!r}, {self.modified!r}, {self.size!r})"
 
 
 ROOT = FtpDir("/", dt.datetime.now())

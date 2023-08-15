@@ -7,9 +7,9 @@ from packaging.requirements import Requirement
 from packaging.specifiers import Specifier, SpecifierSet
 from packaging.version import Version
 
-import depcalc.factory as f
-from depcalc.context import Context, PackageContext
-from depcalc.lazy import (
+import compreq.factory as f
+from compreq.context import Context, PackageContext
+from compreq.lazy import (
     AnyMarker,
     AnyRelease,
     AnyReleaseSet,
@@ -41,7 +41,7 @@ from depcalc.lazy import (
     get_marker,
     get_specifier_operator,
 )
-from depcalc.release import ReleaseSet
+from compreq.release import ReleaseSet
 from tests.utils import fake_release, fake_release_set
 
 
@@ -73,9 +73,9 @@ def test_get_lazy_release(release: AnyRelease, expected: LazyRelease) -> None:
 def test_eager_lazy_release_set__empty() -> None:
     lazy = EagerLazyReleaseSet(set())
     context = MagicMock(PackageContext)
-    context.package = "depcalc"
+    context.package = "compreq"
 
-    assert ReleaseSet("depcalc", set()) == lazy.resolve(context)
+    assert ReleaseSet("compreq", set()) == lazy.resolve(context)
 
 
 def test_eager_lazy_release_set() -> None:
@@ -84,9 +84,9 @@ def test_eager_lazy_release_set() -> None:
 
     lazy = EagerLazyReleaseSet({get_lazy_release(release_1), get_lazy_release(release_2)})
     context = MagicMock(PackageContext)
-    context.package = "depcalc"
+    context.package = "compreq"
 
-    assert ReleaseSet("depcalc", {release_1, release_2}) == lazy.resolve(context)
+    assert ReleaseSet("compreq", {release_1, release_2}) == lazy.resolve(context)
 
 
 def test_prod_lazy_release_set() -> None:
@@ -96,11 +96,11 @@ def test_prod_lazy_release_set() -> None:
 
     lazy = ProdLazyReleaseSet(None)
     context = MagicMock(PackageContext)
-    context.package = "depcalc"
+    context.package = "compreq"
     context.releases.return_value = releases
 
     assert fake_release_set(releases=["1.2.0", "1.3.0"]) == lazy.resolve(context)
-    context.releases.assert_called_once_with("depcalc")
+    context.releases.assert_called_once_with("compreq")
 
 
 def test_prod_lazy_release_set__package() -> None:
@@ -110,7 +110,7 @@ def test_prod_lazy_release_set__package() -> None:
 
     lazy = ProdLazyReleaseSet("foo")
     context = MagicMock(PackageContext)
-    context.package = "depcalc"
+    context.package = "compreq"
     context.releases.return_value = releases
 
     assert fake_release_set(package="foo", releases=["1.2.0", "1.3.0"]) == lazy.resolve(context)
@@ -124,11 +124,11 @@ def test_pre_lazy_release_set() -> None:
 
     lazy = PreLazyReleaseSet(None)
     context = MagicMock(PackageContext)
-    context.package = "depcalc"
+    context.package = "compreq"
     context.releases.return_value = releases
 
     assert fake_release_set(releases=["1.2.0", "1.3.0.rc1", "1.3.0"]) == lazy.resolve(context)
-    context.releases.assert_called_once_with("depcalc")
+    context.releases.assert_called_once_with("compreq")
 
 
 def test_pre_lazy_release_set__package() -> None:
@@ -138,7 +138,7 @@ def test_pre_lazy_release_set__package() -> None:
 
     lazy = PreLazyReleaseSet("foo")
     context = MagicMock(PackageContext)
-    context.package = "depcalc"
+    context.package = "compreq"
     context.releases.return_value = releases
 
     assert fake_release_set(
@@ -154,13 +154,13 @@ def test_dev_lazy_release_set() -> None:
 
     lazy = DevLazyReleaseSet(None)
     context = MagicMock(PackageContext)
-    context.package = "depcalc"
+    context.package = "compreq"
     context.releases.return_value = releases
 
     assert fake_release_set(
         releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
     ) == lazy.resolve(context)
-    context.releases.assert_called_once_with("depcalc")
+    context.releases.assert_called_once_with("compreq")
 
 
 def test_dev_lazy_release_set__package() -> None:
@@ -170,7 +170,7 @@ def test_dev_lazy_release_set__package() -> None:
 
     lazy = DevLazyReleaseSet("foo")
     context = MagicMock(PackageContext)
-    context.package = "depcalc"
+    context.package = "compreq"
     context.releases.return_value = releases
 
     assert (
@@ -199,12 +199,12 @@ def test_dev_lazy_release_set__package() -> None:
             EagerLazyReleaseSet({EagerLazyRelease(fake_release(version="1.2.0"))}),
         ),
         (
-            ReleaseSet("depcalc", set()),
+            ReleaseSet("compreq", set()),
             EagerLazyReleaseSet(set()),
         ),
         (
             ReleaseSet(
-                "depcalc",
+                "compreq",
                 {
                     fake_release(version="1.3.0"),
                     fake_release(version="1.4.0"),
@@ -379,7 +379,7 @@ def test_lazy_requirement__specifier() -> None:
     specifier_set = MagicMock(LazySpecifierSet)
     specifier_set.resolve.return_value = SpecifierSet(">=1.2.3,<2.0.0")
     requirement = LazyRequirement(
-        "depcalc",
+        "compreq",
         None,
         {"extra_1", "extra_2"},
         specifier_set,
@@ -391,15 +391,15 @@ def test_lazy_requirement__specifier() -> None:
     context.for_package.return_value = package_context
 
     assert Requirement(
-        "depcalc[extra_1,extra_2]<2.0.0,>=1.2.3; python_version > '2.0'"
+        "compreq[extra_1,extra_2]<2.0.0,>=1.2.3; python_version > '2.0'"
     ) == requirement.resolve(context)
-    context.for_package.assert_called_once_with("depcalc")
+    context.for_package.assert_called_once_with("compreq")
     specifier_set.resolve.assert_called_once_with(package_context)
 
 
 def test_lazy_requirement__url() -> None:
     requirement = LazyRequirement(
-        "depcalc",
+        "compreq",
         "http://path1/path2",
         set(),
         LazySpecifierSet(set()),
@@ -410,17 +410,17 @@ def test_lazy_requirement__url() -> None:
     context = MagicMock(Context)
     context.for_package.return_value = package_context
 
-    assert Requirement("depcalc@ http://path1/path2") == requirement.resolve(context)
-    context.for_package.assert_called_once_with("depcalc")
+    assert Requirement("compreq@ http://path1/path2") == requirement.resolve(context)
+    context.for_package.assert_called_once_with("compreq")
 
 
 @pytest.mark.parametrize(
     "requirement,expected",
     [
         (
-            "depcalc",
+            "compreq",
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url=None,
                 extras=set(),
                 specifier=LazySpecifierSet(set()),
@@ -428,9 +428,9 @@ def test_lazy_requirement__url() -> None:
             ),
         ),
         (
-            "depcalc==1.1.0",
+            "compreq==1.1.0",
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url=None,
                 extras=set(),
                 specifier=get_lazy_specifier_set("==1.1.0"),
@@ -478,9 +478,9 @@ def test_lazy_requirement__url() -> None:
             ),
         ),
         (
-            Requirement("depcalc[extra]==1.5.0; python_version > '2.0.0'"),
+            Requirement("compreq[extra]==1.5.0; python_version > '2.0.0'"),
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url=None,
                 extras={"extra"},
                 specifier=get_lazy_specifier_set("==1.5.0"),
@@ -488,9 +488,9 @@ def test_lazy_requirement__url() -> None:
             ),
         ),
         (
-            Requirement("depcalc@http://path/v1.6.0"),
+            Requirement("compreq@http://path/v1.6.0"),
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url="http://path/v1.6.0",
                 extras=set(),
                 specifier=LazySpecifierSet(set()),
@@ -499,14 +499,14 @@ def test_lazy_requirement__url() -> None:
         ),
         (
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url=None,
                 extras={"extra"},
                 specifier=get_lazy_specifier_set("==1.7.0"),
                 marker=Marker("python_version > '2.0.0'"),
             ),
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url=None,
                 extras={"extra"},
                 specifier=get_lazy_specifier_set("==1.7.0"),
@@ -515,14 +515,14 @@ def test_lazy_requirement__url() -> None:
         ),
         (
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url="http://path/v1.8.0",
                 extras=set(),
                 specifier=LazySpecifierSet(set()),
                 marker=None,
             ),
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url="http://path/v1.8.0",
                 extras=set(),
                 specifier=LazySpecifierSet(set()),
@@ -540,10 +540,10 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
     [
         # Package
         (
-            f.package("depcalc"),
-            f.package("depcalc"),
+            f.package("compreq"),
+            f.package("compreq"),
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url=None,
                 extras=set(),
                 specifier=LazySpecifierSet(set()),
@@ -551,15 +551,15 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.package("depcalc"),
+            f.package("compreq"),
             f.package("foo"),
             AssertionError,
         ),
         (
-            f.package("depcalc"),
+            f.package("compreq"),
             f.url("http://path/v1.3.0"),
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url="http://path/v1.3.0",
                 extras=set(),
                 specifier=LazySpecifierSet(set()),
@@ -567,10 +567,10 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.package("depcalc"),
+            f.package("compreq"),
             f.extra("extra1"),
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url=None,
                 extras={"extra1"},
                 specifier=LazySpecifierSet(set()),
@@ -578,10 +578,10 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.package("depcalc"),
+            f.package("compreq"),
             f.specifier(">1.5.0"),
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url=None,
                 extras=set(),
                 specifier=get_lazy_specifier_set(">1.5.0"),
@@ -589,10 +589,10 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.package("depcalc"),
+            f.package("compreq"),
             f.specifier_set(">1.5.0"),
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url=None,
                 extras=set(),
                 specifier=get_lazy_specifier_set(">1.5.0"),
@@ -600,10 +600,10 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.package("depcalc"),
+            f.package("compreq"),
             f.marker("python_version>'2.1'"),
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url=None,
                 extras=set(),
                 specifier=LazySpecifierSet(set()),
@@ -613,9 +613,9 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         # Url
         (
             f.url("http://path/v2.0.0"),
-            f.package("depcalc"),
+            f.package("compreq"),
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url="http://path/v2.0.0",
                 extras=set(),
                 specifier=LazySpecifierSet(set()),
@@ -673,9 +673,9 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         # Extra
         (
             f.extra("extra"),
-            f.package("depcalc"),
+            f.package("compreq"),
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url=None,
                 extras={"extra"},
                 specifier=LazySpecifierSet(set()),
@@ -751,9 +751,9 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         # Specifier
         (
             f.specifier("==2.0.0"),
-            f.package("depcalc"),
+            f.package("compreq"),
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url=None,
                 extras=set(),
                 specifier=LazySpecifierSet({get_lazy_specifier("==2.0.0")}),
@@ -805,9 +805,9 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         # Specifier set
         (
             f.specifier_set("==2.0.0"),
-            f.package("depcalc"),
+            f.package("compreq"),
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url=None,
                 extras=set(),
                 specifier=LazySpecifierSet({get_lazy_specifier("==2.0.0")}),
@@ -859,9 +859,9 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         # Marker
         (
             f.marker("python_version=='3.0'"),
-            f.package("depcalc"),
+            f.package("compreq"),
             LazyRequirement(
-                package="depcalc",
+                package="compreq",
                 url=None,
                 extras=set(),
                 specifier=LazySpecifierSet(set()),

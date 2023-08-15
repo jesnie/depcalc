@@ -1,13 +1,13 @@
 [tool.poetry]
-name = "depcalc"
+name = "compreq"
 version = "0.1.0"
 description = "Use typed Python objects to represent files and directories."
-authors = ["Jesper Nielsen <jespernielsen1982+depcalc@gmail.com>"]
+authors = ["Jesper Nielsen <jespernielsen1982+compreq@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 
-homepage = "https://github.com/jesnie/depcalc"
-repository = "https://github.com/jesnie/depcalc"
+homepage = "https://github.com/jesnie/compreq"
+repository = "https://github.com/jesnie/compreq"
 
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -89,27 +89,27 @@ disable = [
 [tool.taskipy.tasks]
 isort = """
     echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX isort XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    isort depcalc tests set_version.py
+    isort compreq tests set_version.py
 """
 isort_check = """
     echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX isort XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    isort --check-only depcalc tests set_version.py
+    isort --check-only compreq tests set_version.py
 """
 black = """
     echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX black XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    black depcalc tests set_version.py
+    black compreq tests set_version.py
 """
 black_check = """
     echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX black XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    black --check depcalc tests set_version.py
+    black --check compreq tests set_version.py
 """
 mypy = """
     echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX mypy XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    mypy depcalc tests set_version.py
+    mypy compreq tests set_version.py
 """
 pylint = """
     echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX pylint XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    pylint depcalc tests set_version.py
+    pylint compreq tests set_version.py
 """
 pytest = """
     echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX pytest XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

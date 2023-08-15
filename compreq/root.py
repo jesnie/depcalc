@@ -2,8 +2,8 @@ from packaging.requirements import Requirement
 from packaging.specifiers import Specifier
 from packaging.version import Version
 
-from depcalc.context import Context, DefaultContext
-from depcalc.lazy import (
+from compreq.context import Context, DefaultContext
+from compreq.lazy import (
     AnyRelease,
     AnyReleaseSet,
     AnyRequirement,
@@ -15,10 +15,10 @@ from depcalc.lazy import (
     get_lazy_specifier,
     get_lazy_version,
 )
-from depcalc.release import Release, ReleaseSet
+from compreq.release import Release, ReleaseSet
 
 
-class DepCalc:
+class CompReq:
     def __init__(self, context: Context | None = None) -> None:
         if context is None:
             context = DefaultContext()

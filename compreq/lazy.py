@@ -11,8 +11,8 @@ from packaging.requirements import Requirement
 from packaging.specifiers import Specifier, SpecifierSet
 from packaging.version import Version
 
-from depcalc.context import Context, PackageContext
-from depcalc.release import Release, ReleaseSet
+from compreq.context import Context, PackageContext
+from compreq.release import Release, ReleaseSet
 
 
 class LazyRelease(ABC):

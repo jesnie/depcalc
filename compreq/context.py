@@ -4,9 +4,9 @@ from abc import ABC, abstractmethod
 
 from packaging.specifiers import SpecifierSet
 
-from depcalc.pypireleases import get_pypi_releases
-from depcalc.pythonreleases import get_python_releases
-from depcalc.release import ReleaseSet
+from compreq.pypireleases import get_pypi_releases
+from compreq.pythonreleases import get_python_releases
+from compreq.release import ReleaseSet
 
 
 class PackageContext(ABC):

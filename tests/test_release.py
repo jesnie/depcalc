@@ -1,6 +1,6 @@
 from packaging.version import Version
 
-from depcalc.release import ReleaseSet, infer_and_set_successor, infer_successor
+from compreq.release import ReleaseSet, infer_and_set_successor, infer_successor
 from tests.utils import fake_release
 
 
@@ -55,7 +55,7 @@ def test_infer_superseded() -> None:
     before_r210a1 = fake_release(version="2.1.0a1", successor=None)
     before_r200 = fake_release(version="2.0.0", successor=None)
     before = ReleaseSet(
-        "depcalc",
+        "compreq",
         {
             before_r200,
             before_r210a1,
@@ -75,7 +75,7 @@ def test_infer_superseded() -> None:
     after_r210a1 = fake_release(version="2.1.0a1", successor=after_r210a2)
     after_r200 = fake_release(version="2.0.0", successor=after_r210)
     after = ReleaseSet(
-        "depcalc",
+        "compreq",
         {
             after_r200,
             after_r210a1,
