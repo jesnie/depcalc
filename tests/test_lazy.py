@@ -10,6 +10,7 @@ from packaging.version import Version
 import compreq.factory as f
 from compreq.context import Context, PackageContext
 from compreq.lazy import (
+    AllLazyReleaseSet,
     AnyMarker,
     AnyRelease,
     AnyReleaseSet,
@@ -18,7 +19,6 @@ from compreq.lazy import (
     AnySpecifierOperator,
     AnySpecifierSet,
     AnyVersion,
-    DevLazyReleaseSet,
     EagerLazyRelease,
     EagerLazyReleaseSet,
     EagerLazyVersion,
@@ -31,6 +31,7 @@ from compreq.lazy import (
     PreLazyReleaseSet,
     ProdLazyReleaseSet,
     ReleaseLazyVersion,
+    SpecifierLazyReleaseSet,
     SpecifierOperator,
     get_lazy_release,
     get_lazy_release_set,
@@ -89,70 +90,12 @@ def test_eager_lazy_release_set() -> None:
     assert ReleaseSet("compreq", {release_1, release_2}) == lazy.resolve(context)
 
 
-def test_prod_lazy_release_set() -> None:
+def test_all_lazy_release_set() -> None:
     releases = fake_release_set(
         releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
     )
 
-    lazy = ProdLazyReleaseSet(None)
-    context = MagicMock(PackageContext)
-    context.package = "compreq"
-    context.releases.return_value = releases
-
-    assert fake_release_set(releases=["1.2.0", "1.3.0"]) == lazy.resolve(context)
-    context.releases.assert_called_once_with("compreq")
-
-
-def test_prod_lazy_release_set__package() -> None:
-    releases = fake_release_set(
-        package="foo", releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
-    )
-
-    lazy = ProdLazyReleaseSet("foo")
-    context = MagicMock(PackageContext)
-    context.package = "compreq"
-    context.releases.return_value = releases
-
-    assert fake_release_set(package="foo", releases=["1.2.0", "1.3.0"]) == lazy.resolve(context)
-    context.releases.assert_called_once_with("foo")
-
-
-def test_pre_lazy_release_set() -> None:
-    releases = fake_release_set(
-        releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
-    )
-
-    lazy = PreLazyReleaseSet(None)
-    context = MagicMock(PackageContext)
-    context.package = "compreq"
-    context.releases.return_value = releases
-
-    assert fake_release_set(releases=["1.2.0", "1.3.0.rc1", "1.3.0"]) == lazy.resolve(context)
-    context.releases.assert_called_once_with("compreq")
-
-
-def test_pre_lazy_release_set__package() -> None:
-    releases = fake_release_set(
-        package="foo", releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
-    )
-
-    lazy = PreLazyReleaseSet("foo")
-    context = MagicMock(PackageContext)
-    context.package = "compreq"
-    context.releases.return_value = releases
-
-    assert fake_release_set(
-        package="foo", releases=["1.2.0", "1.3.0.rc1", "1.3.0"]
-    ) == lazy.resolve(context)
-    context.releases.assert_called_once_with("foo")
-
-
-def test_dev_lazy_release_set() -> None:
-    releases = fake_release_set(
-        releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
-    )
-
-    lazy = DevLazyReleaseSet(None)
+    lazy = AllLazyReleaseSet(None)
     context = MagicMock(PackageContext)
     context.package = "compreq"
     context.releases.return_value = releases
@@ -163,12 +106,12 @@ def test_dev_lazy_release_set() -> None:
     context.releases.assert_called_once_with("compreq")
 
 
-def test_dev_lazy_release_set__package() -> None:
+def test_all_lazy_release_set__package() -> None:
     releases = fake_release_set(
         package="foo", releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
     )
 
-    lazy = DevLazyReleaseSet("foo")
+    lazy = AllLazyReleaseSet("foo")
     context = MagicMock(PackageContext)
     context.package = "compreq"
     context.releases.return_value = releases
@@ -183,12 +126,62 @@ def test_dev_lazy_release_set__package() -> None:
     context.releases.assert_called_once_with("foo")
 
 
+def test_prod_lazy_release_set() -> None:
+    releases = fake_release_set(
+        releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
+    )
+    source = MagicMock(LazyReleaseSet)
+    source.resolve.return_value = releases
+    context = MagicMock(PackageContext)
+
+    lazy = ProdLazyReleaseSet(source)
+
+    assert fake_release_set(releases=["1.2.0", "1.3.0"]) == lazy.resolve(context)
+    source.resolve.assert_called_once_with(context)
+
+
+def test_pre_lazy_release_set() -> None:
+    releases = fake_release_set(
+        releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
+    )
+    source = MagicMock(LazyReleaseSet)
+    source.resolve.return_value = releases
+    context = MagicMock(PackageContext)
+
+    lazy = PreLazyReleaseSet(source)
+
+    assert fake_release_set(releases=["1.2.0", "1.3.0.rc1", "1.3.0"]) == lazy.resolve(context)
+    source.resolve.assert_called_once_with(context)
+
+
+def test_specifier_lazy_release_set() -> None:
+    releases = fake_release_set(
+        releases=["1.2.0", "1.2.1", "1.3.0", "1.3.1", "1.4.0", "2.0.0", "2.1.0"],
+        infer_successors=False,
+    )
+    source = MagicMock(LazyReleaseSet)
+    source.resolve.return_value = releases
+    context = MagicMock(PackageContext)
+
+    lazy = SpecifierLazyReleaseSet(source, get_lazy_specifier_set(">=1.3.0,<2.0.0"))
+
+    assert fake_release_set(
+        releases=["1.3.0", "1.3.1", "1.4.0"],
+        infer_successors=False,
+    ) == lazy.resolve(context)
+    source.resolve.assert_called_once_with(context)
+
+
 @pytest.mark.parametrize(
     "release_set,expected",
     [
         (
             None,
-            ProdLazyReleaseSet(None),
+            ProdLazyReleaseSet(AllLazyReleaseSet(None)),
+        ),
+        (
+            "foo",
+            ProdLazyReleaseSet(AllLazyReleaseSet("foo")),
         ),
         (
             fake_release(version="1.1.0"),
@@ -233,6 +226,54 @@ def test_dev_lazy_release_set__package() -> None:
                     EagerLazyRelease(fake_release(version="1.5.0")),
                     EagerLazyRelease(fake_release(version="1.6.0")),
                 }
+            ),
+        ),
+        (
+            Specifier("==1.7.0"),
+            SpecifierLazyReleaseSet(
+                ProdLazyReleaseSet(AllLazyReleaseSet(None)),
+                get_lazy_specifier_set("==1.7.0"),
+            ),
+        ),
+        (
+            get_lazy_specifier("==1.8.0"),
+            SpecifierLazyReleaseSet(
+                ProdLazyReleaseSet(AllLazyReleaseSet(None)),
+                get_lazy_specifier_set("==1.8.0"),
+            ),
+        ),
+        (
+            SpecifierSet(">=1.9.1,<2.0.0"),
+            SpecifierLazyReleaseSet(
+                ProdLazyReleaseSet(AllLazyReleaseSet(None)),
+                get_lazy_specifier_set(">=1.9.1,<2.0.0"),
+            ),
+        ),
+        (
+            get_lazy_specifier_set(">=1.10.2,<2.0.0"),
+            SpecifierLazyReleaseSet(
+                ProdLazyReleaseSet(AllLazyReleaseSet(None)),
+                get_lazy_specifier_set(">=1.10.2,<2.0.0"),
+            ),
+        ),
+        (
+            Requirement("foo>=1.11.1,<2.0.0"),
+            SpecifierLazyReleaseSet(
+                ProdLazyReleaseSet(AllLazyReleaseSet("foo")),
+                get_lazy_specifier_set(">=1.11.1,<2.0.0"),
+            ),
+        ),
+        (
+            LazyRequirement(
+                package="foo",
+                url=None,
+                extras=set(),
+                specifier=get_lazy_specifier_set(">=1.12.3,<2.0.0"),
+                marker=None,
+            ),
+            SpecifierLazyReleaseSet(
+                ProdLazyReleaseSet(AllLazyReleaseSet("foo")),
+                get_lazy_specifier_set(">=1.12.3,<2.0.0"),
             ),
         ),
     ],

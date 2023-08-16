@@ -1,5 +1,5 @@
 from packaging.requirements import Requirement
-from packaging.specifiers import Specifier
+from packaging.specifiers import Specifier, SpecifierSet
 from packaging.version import Version
 
 from compreq.context import Context, DefaultContext
@@ -8,11 +8,13 @@ from compreq.lazy import (
     AnyReleaseSet,
     AnyRequirement,
     AnySpecifier,
+    AnySpecifierSet,
     AnyVersion,
     get_lazy_release,
     get_lazy_release_set,
     get_lazy_requirement,
     get_lazy_specifier,
+    get_lazy_specifier_set,
     get_lazy_version,
 )
 from compreq.release import Release, ReleaseSet
@@ -40,6 +42,10 @@ class CompReq:
     def resolve_specifier(self, package: str, specifier: AnySpecifier) -> Specifier:
         context = self._context.for_package(package)
         return get_lazy_specifier(specifier).resolve(context)
+
+    def resolve_specifier_set(self, package: str, specifier_set: AnySpecifierSet) -> SpecifierSet:
+        context = self._context.for_package(package)
+        return get_lazy_specifier_set(specifier_set).resolve(context)
 
     def resolve_requirement(self, requirement: AnyRequirement) -> Requirement:
         return get_lazy_requirement(requirement).resolve(self._context)

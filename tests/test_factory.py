@@ -2,7 +2,7 @@ import pytest
 
 import compreq.factory as f
 from compreq.lazy import (
-    DevLazyReleaseSet,
+    AllLazyReleaseSet,
     LazyRequirement,
     LazySpecifierSet,
     PreLazyReleaseSet,
@@ -87,9 +87,9 @@ def test_factories(requirement: LazyRequirement, expected: LazyRequirement) -> N
 
 
 def test_releases() -> None:
-    assert ProdLazyReleaseSet(None) == f.releases()
-    assert ProdLazyReleaseSet("compreq") == f.releases("compreq")
-    assert PreLazyReleaseSet(None) == f.prereleases()
-    assert PreLazyReleaseSet("compreq") == f.prereleases("compreq")
-    assert DevLazyReleaseSet(None) == f.devreleases()
-    assert DevLazyReleaseSet("compreq") == f.devreleases("compreq")
+    assert ProdLazyReleaseSet(AllLazyReleaseSet(None)) == f.releases()
+    assert ProdLazyReleaseSet(AllLazyReleaseSet("compreq")) == f.releases("compreq")
+    assert PreLazyReleaseSet(AllLazyReleaseSet(None)) == f.prereleases()
+    assert PreLazyReleaseSet(AllLazyReleaseSet("compreq")) == f.prereleases("compreq")
+    assert AllLazyReleaseSet(None) == f.devreleases()
+    assert AllLazyReleaseSet("compreq") == f.devreleases("compreq")

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, replace
 from enum import Enum
 from itertools import chain
-from typing import AbstractSet, TypeAlias, overload
+from typing import AbstractSet, TypeAlias, Union, overload
 
 from packaging.markers import Marker
 from packaging.requirements import Requirement
@@ -58,12 +58,20 @@ class EagerLazyReleaseSet(LazyReleaseSet):
 
 
 @dataclass(order=True, frozen=True)
-class ProdLazyReleaseSet(LazyReleaseSet):
+class AllLazyReleaseSet(LazyReleaseSet):
     package: str | None
 
     def resolve(self, context: PackageContext) -> ReleaseSet:
         package = self.package or context.package
-        release_set = context.releases(package)
+        return context.releases(package)
+
+
+@dataclass(order=True, frozen=True)
+class ProdLazyReleaseSet(LazyReleaseSet):
+    source: LazyReleaseSet
+
+    def resolve(self, context: PackageContext) -> ReleaseSet:
+        release_set = self.source.resolve(context)
         return ReleaseSet(
             package=release_set.package,
             releases={
@@ -76,11 +84,10 @@ class ProdLazyReleaseSet(LazyReleaseSet):
 
 @dataclass(order=True, frozen=True)
 class PreLazyReleaseSet(LazyReleaseSet):
-    package: str | None
+    source: LazyReleaseSet
 
     def resolve(self, context: PackageContext) -> ReleaseSet:
-        package = self.package or context.package
-        release_set = context.releases(package)
+        release_set = self.source.resolve(context)
         return ReleaseSet(
             package=release_set.package,
             releases={r for r in release_set.releases if not r.version.is_devrelease},
@@ -88,20 +95,53 @@ class PreLazyReleaseSet(LazyReleaseSet):
 
 
 @dataclass(order=True, frozen=True)
-class DevLazyReleaseSet(LazyReleaseSet):
-    package: str | None
+class SpecifierLazyReleaseSet(LazyReleaseSet):
+    source: LazyReleaseSet
+    specifier_set: LazySpecifierSet
 
     def resolve(self, context: PackageContext) -> ReleaseSet:
-        package = self.package or context.package
-        return context.releases(package)
+        release_set = self.source.resolve(context)
+        specifier_set = self.specifier_set.resolve(context)
+        return ReleaseSet(
+            package=release_set.package,
+            releases={r for r in release_set.releases if r.version in specifier_set},
+        )
 
 
-AnyReleaseSet: TypeAlias = AnyRelease | ReleaseSet | LazyReleaseSet
+AnyReleaseSet: TypeAlias = Union[
+    None,
+    str,
+    Specifier,
+    "LazySpecifier",
+    SpecifierSet,
+    "LazySpecifierSet",
+    Requirement,
+    "LazyRequirement",
+    Release,
+    LazyRelease,
+    ReleaseSet,
+    LazyReleaseSet,
+]
 
 
 def get_lazy_release_set(release_set: AnyReleaseSet | None) -> LazyReleaseSet:
     if release_set is None:
-        release_set = ProdLazyReleaseSet(None)
+        release_set = ProdLazyReleaseSet(AllLazyReleaseSet(None))
+    if isinstance(release_set, str):
+        release_set = ProdLazyReleaseSet(AllLazyReleaseSet(release_set))
+    if isinstance(release_set, (Specifier, LazySpecifier, SpecifierSet)):
+        release_set = get_lazy_specifier_set(release_set)
+    if isinstance(release_set, LazySpecifierSet):
+        release_set = SpecifierLazyReleaseSet(
+            ProdLazyReleaseSet(AllLazyReleaseSet(None)),
+            release_set,
+        )
+    if isinstance(release_set, Requirement):
+        release_set = get_lazy_requirement(release_set)
+    if isinstance(release_set, LazyRequirement):
+        release_set = SpecifierLazyReleaseSet(
+            ProdLazyReleaseSet(AllLazyReleaseSet(release_set.package)), release_set.specifier
+        )
     if isinstance(release_set, Release):
         release_set = EagerLazyRelease(release_set)
     if isinstance(release_set, LazyRelease):
@@ -365,11 +405,7 @@ AnyRequirement: TypeAlias = (
 def get_lazy_requirement(requirement: AnyRequirement) -> LazyRequirement:
     if isinstance(requirement, str):
         requirement = Requirement(requirement)
-    if isinstance(requirement, Specifier):
-        requirement = get_lazy_specifier_set(requirement)
-    if isinstance(requirement, LazySpecifier):
-        requirement = get_lazy_specifier_set(requirement)
-    if isinstance(requirement, SpecifierSet):
+    if isinstance(requirement, (Specifier, LazySpecifier, SpecifierSet)):
         requirement = get_lazy_specifier_set(requirement)
     if isinstance(requirement, LazySpecifierSet):
         requirement = replace(EMPTY_REQUIREMENT, specifier=requirement)
