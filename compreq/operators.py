@@ -1,24 +1,88 @@
+# pylint: disable=redefined-outer-name
+
 import datetime as dt
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from itertools import chain
 
 from packaging.version import Version
 
 from compreq.context import PackageContext
 from compreq.lazy import (
+    EMPTY_REQUIREMENT,
+    AllLazyReleaseSet,
+    AnyMarker,
     AnyReleaseSet,
+    AnySpecifier,
+    AnySpecifierSet,
     AnyVersion,
     LazyRelease,
     LazyReleaseSet,
+    LazyRequirement,
+    LazySpecifier,
+    LazySpecifierSet,
     LazyVersion,
+    PreLazyReleaseSet,
+    ProdLazyReleaseSet,
     get_lazy_release_set,
+    get_lazy_specifier,
+    get_lazy_specifier_set,
     get_lazy_version,
+    get_marker,
 )
 from compreq.release import Release, ReleaseSet
+from compreq.versiontoken import VersionToken
 
 MAJOR = 0
 MINOR = 1
 MICRO = 2
+
+
+version = VersionToken()
+v = version
+
+
+def package(value: str) -> LazyRequirement:
+    return replace(EMPTY_REQUIREMENT, package=value)
+
+
+def pkg(value: str) -> LazyRequirement:
+    return replace(EMPTY_REQUIREMENT, package=value)
+
+
+def url(value: str) -> LazyRequirement:
+    return replace(EMPTY_REQUIREMENT, url=value)
+
+
+def extra(value: str) -> LazyRequirement:
+    return replace(EMPTY_REQUIREMENT, extras={value})
+
+
+def specifier(value: AnySpecifier) -> LazySpecifier:
+    return get_lazy_specifier(value)
+
+
+def specifier_set(value: AnySpecifierSet) -> LazySpecifierSet:
+    return get_lazy_specifier_set(value)
+
+
+def marker(value: AnyMarker) -> LazyRequirement:
+    return replace(EMPTY_REQUIREMENT, marker=get_marker(value))
+
+
+def releases(package: str | None = None) -> LazyReleaseSet:
+    return ProdLazyReleaseSet(AllLazyReleaseSet(package))
+
+
+def prereleases(
+    package: str | None = None,
+) -> LazyReleaseSet:
+    return PreLazyReleaseSet(AllLazyReleaseSet(package))
+
+
+def devreleases(
+    package: str | None = None,
+) -> LazyReleaseSet:
+    return AllLazyReleaseSet(package)
 
 
 @dataclass(order=True, frozen=True)
@@ -60,7 +124,7 @@ class CeilLazyVersion(LazyVersion):
             [release[self.level] + 1],
             (0 for _ in release[self.level + 1 :]),
         )
-        return Version(".".join(str(r) for r in ceil_release))
+        return Version(f"{version.epoch}!" + ".".join(str(r) for r in ceil_release))
 
 
 def ceil_ver(level: int, version: AnyVersion) -> LazyVersion:
@@ -79,7 +143,7 @@ class FloorLazyVersion(LazyVersion):
             release[: self.level + 1],
             (0 for _ in release[self.level + 1 :]),
         )
-        return Version(".".join(str(r) for r in floor_release))
+        return Version(f"{version.epoch}!" + ".".join(str(r) for r in floor_release))
 
 
 def floor_ver(level: int, version: AnyVersion) -> LazyVersion:
@@ -90,7 +154,7 @@ def floor_ver(level: int, version: AnyVersion) -> LazyVersion:
 class MinAgeLazyReleaseSet(LazyReleaseSet):
     now: dt.datetime | None
     min_age: dt.timedelta
-    require_non_empty: bool
+    allow_empty: bool
     release_set: LazyReleaseSet
 
     def resolve(self, context: PackageContext) -> ReleaseSet:
@@ -101,26 +165,26 @@ class MinAgeLazyReleaseSet(LazyReleaseSet):
         max_time = now - self.min_age
 
         result = {r for r in release_set.releases if r.released_time <= max_time}
-        if (not result) and self.require_non_empty:
+        if not (self.allow_empty or result):
             result = {min(release_set.releases)}
         return ReleaseSet(package=release_set.package, releases=result)
 
 
 def min_age(
+    release_set: AnyReleaseSet | None = None,
     *,
     now: dt.datetime | None = None,
     days: int = 0,
     hours: int = 0,
     minutes: int = 0,
     seconds: int = 0,
-    require_non_empty: bool = True,
-    release_set: AnyReleaseSet | None = None,
+    allow_empty: bool = False,
 ) -> MinAgeLazyReleaseSet:
     # TODO(jesnie): Support months and years?
     return MinAgeLazyReleaseSet(
         now,
         dt.timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds),
-        require_non_empty,
+        allow_empty,
         get_lazy_release_set(release_set),
     )
 
@@ -129,7 +193,7 @@ def min_age(
 class MaxAgeLazyReleaseSet(LazyReleaseSet):
     now: dt.datetime | None
     max_age: dt.timedelta
-    require_non_empty: bool
+    allow_empty: bool
     release_set: LazyReleaseSet
 
     def resolve(self, context: PackageContext) -> ReleaseSet:
@@ -137,28 +201,28 @@ class MaxAgeLazyReleaseSet(LazyReleaseSet):
 
         # TODO(jesnie): Get `now` from context.
         now = dt.datetime.utcnow().replace(tzinfo=dt.timezone.utc) if self.now is None else self.now
-        min_time = now + self.max_age
+        min_time = now - self.max_age
 
         result = {r for r in release_set.releases if r.released_time >= min_time}
-        if (not result) and self.require_non_empty:
+        if not (self.allow_empty or result):
             result = {max(release_set.releases)}
         return ReleaseSet(package=release_set.package, releases=result)
 
 
 def max_age(
+    release_set: AnyReleaseSet | None = None,
     *,
     now: dt.datetime | None = None,
     days: int = 0,
     hours: int = 0,
     minutes: int = 0,
     seconds: int = 0,
-    require_non_empty: bool = True,
-    release_set: AnyReleaseSet | None = None,
+    allow_empty: bool = False,
 ) -> MaxAgeLazyReleaseSet:
     # TODO(jesnie): Support months and years?
     return MaxAgeLazyReleaseSet(
         now,
         dt.timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds),
-        require_non_empty,
+        allow_empty,
         get_lazy_release_set(release_set),
     )

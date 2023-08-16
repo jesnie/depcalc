@@ -7,7 +7,7 @@ from packaging.requirements import Requirement
 from packaging.specifiers import Specifier, SpecifierSet
 from packaging.version import Version
 
-import compreq.factory as f
+import compreq.operators as o
 from compreq.context import Context, PackageContext
 from compreq.lazy import (
     AllLazyReleaseSet,
@@ -581,8 +581,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
     [
         # Package
         (
-            f.package("compreq"),
-            f.package("compreq"),
+            o.package("compreq"),
+            o.package("compreq"),
             LazyRequirement(
                 package="compreq",
                 url=None,
@@ -592,13 +592,13 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.package("compreq"),
-            f.package("foo"),
+            o.package("compreq"),
+            o.package("foo"),
             AssertionError,
         ),
         (
-            f.package("compreq"),
-            f.url("http://path/v1.3.0"),
+            o.package("compreq"),
+            o.url("http://path/v1.3.0"),
             LazyRequirement(
                 package="compreq",
                 url="http://path/v1.3.0",
@@ -608,8 +608,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.package("compreq"),
-            f.extra("extra1"),
+            o.package("compreq"),
+            o.extra("extra1"),
             LazyRequirement(
                 package="compreq",
                 url=None,
@@ -619,8 +619,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.package("compreq"),
-            f.specifier(">1.5.0"),
+            o.package("compreq"),
+            o.specifier(">1.5.0"),
             LazyRequirement(
                 package="compreq",
                 url=None,
@@ -630,8 +630,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.package("compreq"),
-            f.specifier_set(">1.5.0"),
+            o.package("compreq"),
+            o.specifier_set(">1.5.0"),
             LazyRequirement(
                 package="compreq",
                 url=None,
@@ -641,8 +641,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.package("compreq"),
-            f.marker("python_version>'2.1'"),
+            o.package("compreq"),
+            o.marker("python_version>'2.1'"),
             LazyRequirement(
                 package="compreq",
                 url=None,
@@ -653,8 +653,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         ),
         # Url
         (
-            f.url("http://path/v2.0.0"),
-            f.package("compreq"),
+            o.url("http://path/v2.0.0"),
+            o.package("compreq"),
             LazyRequirement(
                 package="compreq",
                 url="http://path/v2.0.0",
@@ -664,8 +664,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.url("http://path/v2.0.0"),
-            f.url("http://path/v2.0.0"),
+            o.url("http://path/v2.0.0"),
+            o.url("http://path/v2.0.0"),
             LazyRequirement(
                 package=None,
                 url="http://path/v2.0.0",
@@ -675,13 +675,13 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.url("http://path/v2.0.0"),
-            f.url("http://path/v1.3.0"),
+            o.url("http://path/v2.0.0"),
+            o.url("http://path/v1.3.0"),
             AssertionError,
         ),
         (
-            f.url("http://path/v2.0.0"),
-            f.extra("extra1"),
+            o.url("http://path/v2.0.0"),
+            o.extra("extra1"),
             LazyRequirement(
                 package=None,
                 url="http://path/v2.0.0",
@@ -691,18 +691,18 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.url("http://path/v2.0.0"),
-            f.specifier(">1.5.0"),
+            o.url("http://path/v2.0.0"),
+            o.specifier(">1.5.0"),
             AssertionError,
         ),
         (
-            f.url("http://path/v2.0.0"),
-            f.specifier_set(">1.5.0"),
+            o.url("http://path/v2.0.0"),
+            o.specifier_set(">1.5.0"),
             AssertionError,
         ),
         (
-            f.url("http://path/v2.0.0"),
-            f.marker("python_version>'2.1'"),
+            o.url("http://path/v2.0.0"),
+            o.marker("python_version>'2.1'"),
             LazyRequirement(
                 package=None,
                 url="http://path/v2.0.0",
@@ -713,8 +713,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         ),
         # Extra
         (
-            f.extra("extra"),
-            f.package("compreq"),
+            o.extra("extra"),
+            o.package("compreq"),
             LazyRequirement(
                 package="compreq",
                 url=None,
@@ -724,8 +724,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.extra("extra"),
-            f.url("http://path/v1.3.0"),
+            o.extra("extra"),
+            o.url("http://path/v1.3.0"),
             LazyRequirement(
                 package=None,
                 url="http://path/v1.3.0",
@@ -735,8 +735,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.extra("extra"),
-            f.extra("extra"),
+            o.extra("extra"),
+            o.extra("extra"),
             LazyRequirement(
                 package=None,
                 url=None,
@@ -746,8 +746,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.extra("extra"),
-            f.extra("extra1"),
+            o.extra("extra"),
+            o.extra("extra1"),
             LazyRequirement(
                 package=None,
                 url=None,
@@ -757,8 +757,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.extra("extra"),
-            f.specifier(">1.5.0"),
+            o.extra("extra"),
+            o.specifier(">1.5.0"),
             LazyRequirement(
                 package=None,
                 url=None,
@@ -768,8 +768,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.extra("extra"),
-            f.specifier_set(">1.5.0"),
+            o.extra("extra"),
+            o.specifier_set(">1.5.0"),
             LazyRequirement(
                 package=None,
                 url=None,
@@ -779,8 +779,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.extra("extra"),
-            f.marker("python_version>'2.1'"),
+            o.extra("extra"),
+            o.marker("python_version>'2.1'"),
             LazyRequirement(
                 package=None,
                 url=None,
@@ -791,8 +791,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         ),
         # Specifier
         (
-            f.specifier("==2.0.0"),
-            f.package("compreq"),
+            o.specifier("==2.0.0"),
+            o.package("compreq"),
             LazyRequirement(
                 package="compreq",
                 url=None,
@@ -802,13 +802,13 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.specifier("==2.0.0"),
-            f.url("http://path/v1.3.0"),
+            o.specifier("==2.0.0"),
+            o.url("http://path/v1.3.0"),
             AssertionError,
         ),
         (
-            f.specifier("==2.0.0"),
-            f.extra("extra1"),
+            o.specifier("==2.0.0"),
+            o.extra("extra1"),
             LazyRequirement(
                 package=None,
                 url=None,
@@ -818,23 +818,23 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.specifier("==2.0.0"),
-            f.specifier("==2.0.0"),
+            o.specifier("==2.0.0"),
+            o.specifier("==2.0.0"),
             get_lazy_specifier_set("==2.0.0"),
         ),
         (
-            f.specifier("==2.0.0"),
-            f.specifier(">1.5.0"),
+            o.specifier("==2.0.0"),
+            o.specifier(">1.5.0"),
             get_lazy_specifier_set(">1.5.0,==2.0.0"),
         ),
         (
-            f.specifier("==2.0.0"),
-            f.specifier_set(">1.5.0"),
+            o.specifier("==2.0.0"),
+            o.specifier_set(">1.5.0"),
             get_lazy_specifier_set(">1.5.0,==2.0.0"),
         ),
         (
-            f.specifier("==2.0.0"),
-            f.marker("python_version>'2.1'"),
+            o.specifier("==2.0.0"),
+            o.marker("python_version>'2.1'"),
             LazyRequirement(
                 package=None,
                 url=None,
@@ -845,8 +845,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         ),
         # Specifier set
         (
-            f.specifier_set("==2.0.0"),
-            f.package("compreq"),
+            o.specifier_set("==2.0.0"),
+            o.package("compreq"),
             LazyRequirement(
                 package="compreq",
                 url=None,
@@ -856,13 +856,13 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.specifier_set("==2.0.0"),
-            f.url("http://path/v1.3.0"),
+            o.specifier_set("==2.0.0"),
+            o.url("http://path/v1.3.0"),
             AssertionError,
         ),
         (
-            f.specifier_set("==2.0.0"),
-            f.extra("extra1"),
+            o.specifier_set("==2.0.0"),
+            o.extra("extra1"),
             LazyRequirement(
                 package=None,
                 url=None,
@@ -872,23 +872,23 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.specifier_set("==2.0.0"),
-            f.specifier(">1.5.0"),
+            o.specifier_set("==2.0.0"),
+            o.specifier(">1.5.0"),
             get_lazy_specifier_set(">1.5.0,==2.0.0"),
         ),
         (
-            f.specifier_set("==2.0.0"),
-            f.specifier_set("==2.0.0"),
+            o.specifier_set("==2.0.0"),
+            o.specifier_set("==2.0.0"),
             get_lazy_specifier_set("==2.0.0"),
         ),
         (
-            f.specifier_set("==2.0.0"),
-            f.specifier_set(">1.5.0"),
+            o.specifier_set("==2.0.0"),
+            o.specifier_set(">1.5.0"),
             get_lazy_specifier_set(">1.5.0,==2.0.0"),
         ),
         (
-            f.specifier_set("==2.0.0"),
-            f.marker("python_version>'2.1'"),
+            o.specifier_set("==2.0.0"),
+            o.marker("python_version>'2.1'"),
             LazyRequirement(
                 package=None,
                 url=None,
@@ -899,8 +899,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         ),
         # Marker
         (
-            f.marker("python_version=='3.0'"),
-            f.package("compreq"),
+            o.marker("python_version=='3.0'"),
+            o.package("compreq"),
             LazyRequirement(
                 package="compreq",
                 url=None,
@@ -910,8 +910,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.marker("python_version=='3.0'"),
-            f.url("http://path/v1.3.0"),
+            o.marker("python_version=='3.0'"),
+            o.url("http://path/v1.3.0"),
             LazyRequirement(
                 package=None,
                 url="http://path/v1.3.0",
@@ -921,8 +921,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.marker("python_version=='3.0'"),
-            f.extra("extra1"),
+            o.marker("python_version=='3.0'"),
+            o.extra("extra1"),
             LazyRequirement(
                 package=None,
                 url=None,
@@ -932,8 +932,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.marker("python_version=='3.0'"),
-            f.specifier(">1.5.0"),
+            o.marker("python_version=='3.0'"),
+            o.specifier(">1.5.0"),
             LazyRequirement(
                 package=None,
                 url=None,
@@ -943,8 +943,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.marker("python_version=='3.0'"),
-            f.specifier_set(">1.5.0"),
+            o.marker("python_version=='3.0'"),
+            o.specifier_set(">1.5.0"),
             LazyRequirement(
                 package=None,
                 url=None,
@@ -954,8 +954,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.marker("python_version=='3.0'"),
-            f.marker("python_version=='3.0'"),
+            o.marker("python_version=='3.0'"),
+            o.marker("python_version=='3.0'"),
             LazyRequirement(
                 package=None,
                 url=None,
@@ -965,8 +965,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             ),
         ),
         (
-            f.marker("python_version=='3.0'"),
-            f.marker("python_version>'2.1'"),
+            o.marker("python_version=='3.0'"),
+            o.marker("python_version>'2.1'"),
             LazyRequirement(
                 package=None,
                 url=None,
