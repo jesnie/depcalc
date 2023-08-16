@@ -3,7 +3,6 @@
 * `now` in context.
 * Support months and years.
 * Update GitHub actions.
-* GitHub action for keeping up-to-date.
 * Support tensorflow_probability -> Python version.
 * Test everything.
 * Document everything.
