@@ -4,7 +4,6 @@ from typing import Any, Collection, Sequence
 from packaging.specifiers import SpecifierSet
 from tomlkit import dump, dumps, load
 
-import compreq.factory as f
 import compreq.operators as o
 from compreq.context import DefaultContext
 from compreq.lazy import AnyRequirement, AnySpecifierSet
@@ -53,7 +52,7 @@ def set_python_version(cr: CompReq, pyproject: Any) -> AnySpecifierSet:
         "python", o.floor_ver(o.MINOR, o.max_ver(o.min_age(days=3 * YEAR_DAYS)))
     )
     ceil = cr.resolve_version("python", o.ceil_ver(o.MAJOR, o.max_ver()))
-    specfiers = f.version(">=", floor) & f.version("<", ceil)
+    specfiers = o.version(">=", floor) & o.version("<", ceil)
 
     tool = pyproject["tool"]
     poetry = tool["poetry"]
@@ -96,10 +95,10 @@ def main() -> None:
 
     python_specifiers = set_python_version(cr, pyproject)
 
-    default_range = f.version(
+    default_range = o.version(
         ">=", o.floor_ver(o.MINOR, o.max_ver(o.min_age(days=YEAR_DAYS)))
-    ) & f.version("<", o.ceil_ver(o.MAJOR, o.max_ver()))
-    dev_range = f.version(">=", o.floor_ver(o.MINOR, o.max_ver())) & f.version(
+    ) & o.version("<", o.ceil_ver(o.MAJOR, o.max_ver()))
+    dev_range = o.version(">=", o.floor_ver(o.MINOR, o.max_ver())) & o.version(
         "<", o.ceil_ver(o.MINOR, o.max_ver())
     )
 
@@ -108,12 +107,12 @@ def main() -> None:
         pyproject,
         None,
         [
-            f.pkg("beautifulsoup4") & default_range,
-            f.pkg("packaging") & default_range,
-            f.pkg("pip") & default_range,
-            f.pkg("python") & python_specifiers,
-            f.pkg("python-dateutil") & default_range,
-            f.pkg("requests") & default_range,
+            o.pkg("beautifulsoup4") & default_range,
+            o.pkg("packaging") & default_range,
+            o.pkg("pip") & default_range,
+            o.pkg("python") & python_specifiers,
+            o.pkg("python-dateutil") & default_range,
+            o.pkg("requests") & default_range,
         ],
     )
 
@@ -122,16 +121,16 @@ def main() -> None:
         pyproject,
         "dev",
         [
-            f.pkg("black") & dev_range,
-            f.pkg("isort") & dev_range,
-            f.pkg("mypy") & dev_range,
-            f.pkg("pylint") & dev_range,
-            f.pkg("pytest") & dev_range,
-            f.pkg("taskipy") & dev_range,
-            f.pkg("tomlkit") & dev_range,
-            f.pkg("types-beautifulsoup4") & default_range,
-            f.pkg("types-python-dateutil") & default_range,
-            f.pkg("types-requests") & default_range,
+            o.pkg("black") & dev_range,
+            o.pkg("isort") & dev_range,
+            o.pkg("mypy") & dev_range,
+            o.pkg("pylint") & dev_range,
+            o.pkg("pytest") & dev_range,
+            o.pkg("taskipy") & dev_range,
+            o.pkg("tomlkit") & dev_range,
+            o.pkg("types-beautifulsoup4") & default_range,
+            o.pkg("types-python-dateutil") & default_range,
+            o.pkg("types-requests") & default_range,
         ],
     )
 
