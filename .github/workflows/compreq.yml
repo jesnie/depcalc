@@ -1,0 +1,22 @@
+name: compreq
+
+on:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    # 10:17 every Monday - A compromise between random and a convenient time:
+    - cron: '17 10 * * 1'
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  compreq:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - run: curl -sSL https://install.python-poetry.org | python3 -
+      - run: poetry install --all-extras
+      - run: ./compreq.sh
