@@ -1,7 +1,8 @@
 import argparse
 import re
+from typing import Any
 
-import toml
+import tomlkit
 
 VERSION_RE = re.compile(r"v\d+\.\d+\.\d+(-.*)?")
 PYPROJECT_FILE = "pyproject.toml"
@@ -14,12 +15,12 @@ def parse_version(github_ref: str) -> str:
 
 def set_version(version: str) -> None:
     with open(PYPROJECT_FILE, "rt", encoding="utf-8") as fi:
-        config = toml.load(fi)
+        config: Any = tomlkit.load(fi)
 
     config["tool"]["poetry"]["version"] = version
 
     with open(PYPROJECT_FILE, "wt", encoding="utf-8") as fo:
-        toml.dump(config, fo)
+        tomlkit.dump(config, fo)
 
 
 def main() -> None:
