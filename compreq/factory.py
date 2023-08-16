@@ -2,10 +2,10 @@ from dataclasses import replace
 
 from compreq.lazy import (
     EMPTY_REQUIREMENT,
+    AllLazyReleaseSet,
     AnyMarker,
     AnySpecifier,
     AnySpecifierSet,
-    DevLazyReleaseSet,
     LazyReleaseSet,
     LazyRequirement,
     LazySpecifier,
@@ -51,16 +51,16 @@ def marker(value: AnyMarker) -> LazyRequirement:
 
 
 def releases(package: str | None = None) -> LazyReleaseSet:  # pylint: disable=redefined-outer-name
-    return ProdLazyReleaseSet(package)
+    return ProdLazyReleaseSet(AllLazyReleaseSet(package))
 
 
 def prereleases(
     package: str | None = None,  # pylint: disable=redefined-outer-name
 ) -> LazyReleaseSet:
-    return PreLazyReleaseSet(package)
+    return PreLazyReleaseSet(AllLazyReleaseSet(package))
 
 
 def devreleases(
     package: str | None = None,  # pylint: disable=redefined-outer-name
 ) -> LazyReleaseSet:
-    return DevLazyReleaseSet(package)
+    return AllLazyReleaseSet(package)
