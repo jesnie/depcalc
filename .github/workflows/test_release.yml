@@ -22,6 +22,22 @@ jobs:
       - run: poetry install --all-extras
       - run: poetry run task test
 
+  test-install:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.11"]
+
+    name: test-install-${{ matrix.python }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+      - run: curl -sSL https://install.python-poetry.org | python3 -
+      - run: poetry install --only main
+      - run: poetry run python -c "import compreq"
+
   all-tests:
     needs: [tests]
     runs-on: ubuntu-latest
