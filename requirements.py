@@ -96,7 +96,14 @@ def main() -> None:
     python_specifiers = set_python_version(cr, pyproject)
 
     default_range = o.version(
-        ">=", o.floor_ver(o.MINOR, o.max_ver(o.min_age(days=YEAR_DAYS)))
+        ">=",
+        o.floor_ver(
+            o.MINOR,
+            o.minimum_ver(
+                o.max_ver(o.min_age(days=YEAR_DAYS)),
+                o.min_ver(o.count(o.MINOR, 3)),
+            ),
+        ),
     ) & o.version("<", o.ceil_ver(o.MAJOR, o.max_ver()))
     dev_range = o.version(">=", o.floor_ver(o.MINOR, o.max_ver())) & o.version(
         "<", o.ceil_ver(o.MINOR, o.max_ver())

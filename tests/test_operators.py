@@ -1,5 +1,5 @@
 import datetime as dt
-from typing import Collection
+from typing import Collection, Sequence
 from unittest.mock import MagicMock
 
 import pytest
@@ -144,6 +144,34 @@ def test_max_ver(releases: Collection[str], expected: str) -> None:
     max_ver = o.max_ver(release_set)
     assert fake_release(version=expected) == max_ver.resolve(context)
     assert context.releases.called_once_with("compreq")
+
+
+@pytest.mark.parametrize(
+    "versions,expected",
+    [
+        (["1.0.0", "1.1.0", "1.1.1"], "1.0.0"),
+        (["1.1.0", "1.1.1"], "1.1.0"),
+        (["1.1.1"], "1.1.1"),
+    ],
+)
+def test_minimum_ver(versions: Sequence[str], expected: str) -> None:
+    context = MagicMock(PackageContext)
+    lazy = o.minimum_ver(*versions)
+    assert Version(expected) == lazy.resolve(context)
+
+
+@pytest.mark.parametrize(
+    "versions,expected",
+    [
+        (["1.0.0", "1.1.0", "1.1.1"], "1.1.1"),
+        (["1.0.0", "1.1.0"], "1.1.0"),
+        (["1.0.0"], "1.0.0"),
+    ],
+)
+def test_maximum_ver(versions: Sequence[str], expected: str) -> None:
+    context = MagicMock(PackageContext)
+    lazy = o.maximum_ver(*versions)
+    assert Version(expected) == lazy.resolve(context)
 
 
 @pytest.mark.parametrize(
@@ -322,3 +350,98 @@ def test_max_age__empty_not_allowed() -> None:
         ],
         infer_successors=False,
     ) == max_age.resolve(context)
+
+
+@pytest.mark.parametrize(
+    "level,n,releases,expected",
+    [
+        (
+            o.MAJOR,
+            3,
+            [
+                "1.0.0",
+                "2.0.0",
+                "2.1.0",
+                "2.1.1",
+                "2.2.0a1dev1",
+                "2.2.0a1",
+                "2.2.0",
+                "1!1.0.0",
+            ],
+            [
+                "1.0.0",
+                "2.0.0",
+                "2.1.0",
+                "2.1.1",
+                "2.2.0a1dev1",
+                "2.2.0a1",
+                "2.2.0",
+                "1!1.0.0",
+            ],
+        ),
+        (
+            o.MINOR,
+            3,
+            [
+                "1.0.0",
+                "2.0.0",
+                "2.1.0",
+                "2.1.1",
+                "2.2.0a1dev1",
+                "2.2.0a1",
+                "2.2.0",
+                "1!1.0.0",
+            ],
+            [
+                "2.1.0",
+                "2.1.1",
+                "2.2.0a1dev1",
+                "2.2.0a1",
+                "2.2.0",
+                "1!1.0.0",
+            ],
+        ),
+        (
+            o.MICRO,
+            3,
+            [
+                "1.0.0",
+                "2.0.0",
+                "2.1.0",
+                "2.1.1",
+                "2.2.0a1dev1",
+                "2.2.0a1",
+                "2.2.0",
+                "1!1.0.0",
+            ],
+            [
+                "2.1.1",
+                "2.2.0a1dev1",
+                "2.2.0a1",
+                "2.2.0",
+                "1!1.0.0",
+            ],
+        ),
+        (
+            o.MINOR,
+            3,
+            [
+                "2.2.0a1dev1",
+                "2.2.0a1",
+                "2.2.0",
+                "1!1.0.0",
+            ],
+            [
+                "2.2.0",
+                "1!1.0.0",
+            ],
+        ),
+    ],
+)
+def test_count(level: int, n: int, releases: Collection[str], expected: Collection[str]) -> None:
+    release_set = fake_release_set(releases=releases, infer_successors=False)
+    context = MagicMock(PackageContext)
+    context.package = "compreq"
+    count = o.count(level, n, release_set)
+
+    assert fake_release_set(releases=expected, infer_successors=False) == count.resolve(context)
