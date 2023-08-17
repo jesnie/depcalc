@@ -9,10 +9,6 @@ from compreq.context import DefaultContext
 from compreq.lazy import AnyRequirement, AnySpecifierSet
 from compreq.root import CompReq
 
-# TODO(jesper): Support natively:
-MONTH_DAYS = 30
-YEAR_DAYS = 365
-
 
 def get_python_specifier(pyproject: Any) -> SpecifierSet:
     prev_python = pyproject["tool"]["poetry"]["dependencies"]["python"]
@@ -48,9 +44,7 @@ def set_python_classifiers(
 
 
 def set_python_version(cr: CompReq, pyproject: Any) -> AnySpecifierSet:
-    floor = cr.resolve_version(
-        "python", o.floor_ver(o.MINOR, o.max_ver(o.min_age(days=3 * YEAR_DAYS)))
-    )
+    floor = cr.resolve_version("python", o.floor_ver(o.MINOR, o.max_ver(o.min_age(years=3))))
     ceil = cr.resolve_version("python", o.ceil_ver(o.MAJOR, o.max_ver()))
     specfiers = o.version(">=", floor) & o.version("<", ceil)
 
@@ -100,7 +94,7 @@ def main() -> None:
         o.floor_ver(
             o.MINOR,
             o.minimum_ver(
-                o.max_ver(o.min_age(days=YEAR_DAYS)),
+                o.max_ver(o.min_age(years=1)),
                 o.min_ver(o.count(o.MINOR, 3)),
             ),
         ),
