@@ -18,7 +18,7 @@ from compreq.lazy import (
     get_marker,
 )
 from compreq.versiontoken import VersionToken
-from tests.utils import fake_release, fake_release_set
+from tests.utils import fake_release, fake_release_set, utc
 
 
 def test_version() -> None:
@@ -221,9 +221,37 @@ def test_min_age() -> None:
         ],
         infer_successors=False,
     )
+
     min_age = o.min_age(
-        release_set, now=dt.datetime(2023, 8, 16, 16, 5, 0), minutes=3, allow_empty=True
+        release_set, now=utc(dt.datetime(2023, 8, 16, 16, 5, 0)), minutes=3, allow_empty=True
     )
+    assert fake_release_set(
+        releases=[
+            fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
+            fake_release(version="1.0.1", released_time=dt.datetime(2023, 8, 16, 16, 1, 0)),
+            fake_release(version="1.0.2", released_time=dt.datetime(2023, 8, 16, 16, 2, 0)),
+        ],
+        infer_successors=False,
+    ) == min_age.resolve(context)
+
+
+def test_min_age__context_now() -> None:
+    context = MagicMock(PackageContext)
+    context.package = "compreq"
+    context.now = utc(dt.datetime(2023, 8, 16, 16, 5, 0))
+
+    release_set = fake_release_set(
+        releases=[
+            fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
+            fake_release(version="1.0.1", released_time=dt.datetime(2023, 8, 16, 16, 1, 0)),
+            fake_release(version="1.0.2", released_time=dt.datetime(2023, 8, 16, 16, 2, 0)),
+            fake_release(version="1.0.3", released_time=dt.datetime(2023, 8, 16, 16, 3, 0)),
+            fake_release(version="1.0.4", released_time=dt.datetime(2023, 8, 16, 16, 4, 0)),
+        ],
+        infer_successors=False,
+    )
+
+    min_age = o.min_age(release_set, minutes=3, allow_empty=True)
     assert fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -248,7 +276,7 @@ def test_min_age__empty_allowed() -> None:
         infer_successors=False,
     )
     min_age = o.min_age(
-        release_set, now=dt.datetime(2023, 8, 16, 16, 5, 0), minutes=6, allow_empty=True
+        release_set, now=utc(dt.datetime(2023, 8, 16, 16, 5, 0)), minutes=6, allow_empty=True
     )
     assert fake_release_set(
         releases=[],
@@ -270,7 +298,7 @@ def test_min_age__empty_not_allowed() -> None:
         infer_successors=False,
     )
     min_age = o.min_age(
-        release_set, now=dt.datetime(2023, 8, 16, 16, 5, 0), minutes=6, allow_empty=False
+        release_set, now=utc(dt.datetime(2023, 8, 16, 16, 5, 0)), minutes=6, allow_empty=False
     )
     assert fake_release_set(
         releases=[
@@ -294,8 +322,33 @@ def test_max_age() -> None:
         infer_successors=False,
     )
     max_age = o.max_age(
-        release_set, now=dt.datetime(2023, 8, 16, 16, 5, 0), minutes=3, allow_empty=True
+        release_set, now=utc(dt.datetime(2023, 8, 16, 16, 5, 0)), minutes=3, allow_empty=True
     )
+    assert fake_release_set(
+        releases=[
+            fake_release(version="1.0.2", released_time=dt.datetime(2023, 8, 16, 16, 2, 0)),
+            fake_release(version="1.0.3", released_time=dt.datetime(2023, 8, 16, 16, 3, 0)),
+            fake_release(version="1.0.4", released_time=dt.datetime(2023, 8, 16, 16, 4, 0)),
+        ],
+        infer_successors=False,
+    ) == max_age.resolve(context)
+
+
+def test_max_age__context_now() -> None:
+    context = MagicMock(PackageContext)
+    context.package = "compreq"
+    context.now = utc(dt.datetime(2023, 8, 16, 16, 5, 0))
+    release_set = fake_release_set(
+        releases=[
+            fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
+            fake_release(version="1.0.1", released_time=dt.datetime(2023, 8, 16, 16, 1, 0)),
+            fake_release(version="1.0.2", released_time=dt.datetime(2023, 8, 16, 16, 2, 0)),
+            fake_release(version="1.0.3", released_time=dt.datetime(2023, 8, 16, 16, 3, 0)),
+            fake_release(version="1.0.4", released_time=dt.datetime(2023, 8, 16, 16, 4, 0)),
+        ],
+        infer_successors=False,
+    )
+    max_age = o.max_age(release_set, minutes=3, allow_empty=True)
     assert fake_release_set(
         releases=[
             fake_release(version="1.0.2", released_time=dt.datetime(2023, 8, 16, 16, 2, 0)),
@@ -320,7 +373,7 @@ def test_max_age__empty_allowed() -> None:
         infer_successors=False,
     )
     max_age = o.max_age(
-        release_set, now=dt.datetime(2023, 8, 16, 16, 10, 0), minutes=3, allow_empty=True
+        release_set, now=utc(dt.datetime(2023, 8, 16, 16, 10, 0)), minutes=3, allow_empty=True
     )
     assert fake_release_set(
         releases=[],
@@ -342,7 +395,7 @@ def test_max_age__empty_not_allowed() -> None:
         infer_successors=False,
     )
     max_age = o.max_age(
-        release_set, now=dt.datetime(2023, 8, 16, 16, 10, 0), minutes=3, allow_empty=False
+        release_set, now=utc(dt.datetime(2023, 8, 16, 16, 10, 0)), minutes=3, allow_empty=False
     )
     assert fake_release_set(
         releases=[

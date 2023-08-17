@@ -4,6 +4,14 @@ from typing import Collection
 from packaging.version import Version
 
 from compreq.release import Release, ReleaseSet, infer_and_set_successor
+from compreq.time import UtcDatetime, is_utc_datetime
+
+
+def utc(time: dt.datetime) -> UtcDatetime:
+    if not is_utc_datetime(time):
+        time = time.replace(tzinfo=dt.timezone.utc)
+    assert is_utc_datetime(time)
+    return time
 
 
 def fake_release(
@@ -16,7 +24,7 @@ def fake_release(
     if isinstance(version, str):
         version = Version(version)
     assert isinstance(version, Version)
-    return Release(package, version, released_time, successor)
+    return Release(package, version, utc(released_time), successor)
 
 
 def fake_release_set(

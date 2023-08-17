@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-import datetime as dt
 from dataclasses import dataclass, replace
 from typing import AbstractSet, Collection
 
 from packaging.version import Version
+
+from compreq.time import UtcDatetime
 
 
 @dataclass(order=True, frozen=True)
 class Release:
     package: str
     version: Version
-    released_time: dt.datetime
+    released_time: UtcDatetime
     successor: Release | None
 
 

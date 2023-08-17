@@ -1,3 +1,5 @@
+from typing import NoReturn, overload
+
 from packaging.requirements import Requirement
 from packaging.specifiers import Specifier, SpecifierSet
 from packaging.version import Version
@@ -21,9 +23,32 @@ from compreq.release import Release, ReleaseSet
 
 
 class CompReq:
-    def __init__(self, context: Context | None = None) -> None:
+    @overload
+    def __init__(self, context: None = None, *, python_specifier: None = None) -> NoReturn:
+        ...
+
+    @overload
+    def __init__(self, context: None = None, *, python_specifier: SpecifierSet | str) -> None:
+        ...
+
+    @overload
+    def __init__(self, context: Context, *, python_specifier: None = None) -> None:
+        ...
+
+    @overload
+    def __init__(self, context: Context, *, python_specifier: SpecifierSet | str) -> NoReturn:
+        ...
+
+    def __init__(
+        self, context: Context | None = None, *, python_specifier: SpecifierSet | str | None = None
+    ) -> None:
+        assert (context is None) != (python_specifier is None), (
+            "Must set exactly one of `context` and `python_specifier`."
+            f" Found: {context=}, {python_specifier=}"
+        )
         if context is None:
-            context = DefaultContext()
+            assert python_specifier is not None, python_specifier
+            context = DefaultContext(python_specifier)
         assert context is not None
         self._context = context
 
