@@ -4,6 +4,7 @@ import datetime as dt
 from dataclasses import dataclass, replace
 from itertools import chain
 
+from dateutil.relativedelta import relativedelta
 from packaging.version import Version
 
 from compreq.context import PackageContext
@@ -186,7 +187,7 @@ def floor_ver(level: int, version: AnyVersion) -> LazyVersion:
 @dataclass(order=True, frozen=True)
 class MinAgeLazyReleaseSet(LazyReleaseSet):
     now: UtcDatetime | None
-    min_age: dt.timedelta
+    min_age: dt.timedelta | relativedelta
     allow_empty: bool
     release_set: LazyReleaseSet
 
@@ -206,25 +207,33 @@ def min_age(
     release_set: AnyReleaseSet | None = None,
     *,
     now: UtcDatetime | None = None,
+    age: dt.timedelta | relativedelta | None = None,
+    years: int = 0,
+    months: int = 0,
+    weeks: int = 0,
     days: int = 0,
     hours: int = 0,
     minutes: int = 0,
     seconds: int = 0,
     allow_empty: bool = False,
 ) -> MinAgeLazyReleaseSet:
-    # TODO(jesnie): Support months and years?
-    return MinAgeLazyReleaseSet(
-        now,
-        dt.timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds),
-        allow_empty,
-        get_lazy_release_set(release_set),
-    )
+    if age is None:
+        age = relativedelta(
+            years=years,
+            months=months,
+            weeks=weeks,
+            days=days,
+            hours=hours,
+            minutes=minutes,
+            seconds=seconds,
+        )
+    return MinAgeLazyReleaseSet(now, age, allow_empty, get_lazy_release_set(release_set))
 
 
 @dataclass(order=True, frozen=True)
 class MaxAgeLazyReleaseSet(LazyReleaseSet):
     now: UtcDatetime | None
-    max_age: dt.timedelta
+    max_age: dt.timedelta | relativedelta
     allow_empty: bool
     release_set: LazyReleaseSet
 
@@ -244,19 +253,27 @@ def max_age(
     release_set: AnyReleaseSet | None = None,
     *,
     now: UtcDatetime | None = None,
+    age: dt.timedelta | relativedelta | None = None,
+    years: int = 0,
+    months: int = 0,
+    weeks: int = 0,
     days: int = 0,
     hours: int = 0,
     minutes: int = 0,
     seconds: int = 0,
     allow_empty: bool = False,
 ) -> MaxAgeLazyReleaseSet:
-    # TODO(jesnie): Support months and years?
-    return MaxAgeLazyReleaseSet(
-        now,
-        dt.timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds),
-        allow_empty,
-        get_lazy_release_set(release_set),
-    )
+    if age is None:
+        age = relativedelta(
+            years=years,
+            months=months,
+            weeks=weeks,
+            days=days,
+            hours=hours,
+            minutes=minutes,
+            seconds=seconds,
+        )
+    return MaxAgeLazyReleaseSet(now, age, allow_empty, get_lazy_release_set(release_set))
 
 
 @dataclass(order=True, frozen=True)

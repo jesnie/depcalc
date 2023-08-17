@@ -1,11 +1,9 @@
 * Faster Python release count?
-* Support months and years.
 * Update GitHub actions.
 * Support tensorflow_probability -> Python version.
 * Test everything.
 * Document everything.
 * Support Poetry version syntax?
-* Relative min/max/index
 
 
 Alternatives:
