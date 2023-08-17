@@ -1,5 +1,4 @@
 * Faster Python release count?
-* Count releases.
 * `now` in context.
 * Support months and years.
 * Update GitHub actions.

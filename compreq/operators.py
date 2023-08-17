@@ -112,17 +112,45 @@ def max_ver(release_set: AnyReleaseSet | None = None) -> LazyRelease:
 
 
 @dataclass(order=True, frozen=True)
+class MinimumLazyVersion(LazyVersion):
+    versions: tuple[LazyVersion, ...]
+
+    def resolve(self, context: PackageContext) -> Version:
+        return min(v.resolve(context) for v in self.versions)
+
+
+def minimum_ver(*versions: AnyVersion) -> LazyVersion:
+    return MinimumLazyVersion(tuple(get_lazy_version(v) for v in versions))
+
+
+@dataclass(order=True, frozen=True)
+class MaximumLazyVersion(LazyVersion):
+    versions: tuple[LazyVersion, ...]
+
+    def resolve(self, context: PackageContext) -> Version:
+        return max(v.resolve(context) for v in self.versions)
+
+
+def maximum_ver(*versions: AnyVersion) -> LazyVersion:
+    return MaximumLazyVersion(tuple(get_lazy_version(v) for v in versions))
+
+
+@dataclass(order=True, frozen=True)
 class CeilLazyVersion(LazyVersion):
     level: int
     version: LazyVersion
 
     def resolve(self, context: PackageContext) -> Version:
         version = self.version.resolve(context)
+        return self.ceil(self.level, version)
+
+    @staticmethod
+    def ceil(level: int, version: Version) -> Version:
         release = version.release
         ceil_release = chain(
-            release[: self.level],
-            [release[self.level] + 1],
-            (0 for _ in release[self.level + 1 :]),
+            release[:level],
+            [release[level] + 1],
+            (0 for _ in release[level + 1 :]),
         )
         return Version(f"{version.epoch}!" + ".".join(str(r) for r in ceil_release))
 
@@ -138,10 +166,14 @@ class FloorLazyVersion(LazyVersion):
 
     def resolve(self, context: PackageContext) -> Version:
         version = self.version.resolve(context)
+        return self.floor(self.level, version)
+
+    @staticmethod
+    def floor(level: int, version: Version) -> Version:
         release = version.release
         floor_release = chain(
-            release[: self.level + 1],
-            (0 for _ in release[self.level + 1 :]),
+            release[: level + 1],
+            (0 for _ in release[level + 1 :]),
         )
         return Version(f"{version.epoch}!" + ".".join(str(r) for r in floor_release))
 
@@ -226,3 +258,27 @@ def max_age(
         allow_empty,
         get_lazy_release_set(release_set),
     )
+
+
+@dataclass(order=True, frozen=True)
+class CountLazyReleaseSet(LazyReleaseSet):
+    level: int
+    n: int
+    release_set: LazyReleaseSet
+
+    def resolve(self, context: PackageContext) -> ReleaseSet:
+        release_set = self.release_set.resolve(context)
+        unique_versions_at_level = {
+            FloorLazyVersion.floor(self.level, r.version) for r in release_set.releases
+        }
+        min_version = sorted(unique_versions_at_level, reverse=True)[: self.n][-1]
+        result = {r for r in release_set.releases if r.version >= min_version}
+        return ReleaseSet(package=release_set.package, releases=result)
+
+
+def count(
+    level: int,
+    n: int,
+    release_set: AnyReleaseSet | None = None,
+) -> LazyReleaseSet:
+    return CountLazyReleaseSet(level, n, get_lazy_release_set(release_set))
