@@ -11,6 +11,8 @@ from typing import Mapping, NewType
 import requests
 from bs4 import BeautifulSoup, NavigableString, Tag
 
+from compreq.time import UtcDatetime, is_utc_datetime, utc_now
+
 Url = NewType("Url", str)
 
 LS_LINE_RE = re.compile(r"\s*(\d\d-\w\w\w-\d\d\d\d\s\d\d:\d\d)\s*((-)|(\d+))\s*")
@@ -18,7 +20,7 @@ LS_TIMESTAMP_FORMAT = "%d-%b-%Y %H:%M"
 
 
 class FtpPath(ABC):
-    def __init__(self, path_str: str, modified: dt.datetime) -> None:
+    def __init__(self, path_str: str, modified: UtcDatetime) -> None:
         assert path_str.startswith("/"), path_str
         self.path_str = path_str
         self.modified = modified
@@ -37,7 +39,7 @@ class FtpPath(ABC):
 
 
 class FtpDir(FtpPath):
-    def __init__(self, path_str: str, modified: dt.datetime) -> None:
+    def __init__(self, path_str: str, modified: UtcDatetime) -> None:
         super().__init__(path_str, modified)
         assert path_str.endswith("/"), path_str
 
@@ -71,6 +73,7 @@ class FtpDir(FtpPath):
                 path_str = self.path_str + href
                 modified = dt.datetime.strptime(modified_str, LS_TIMESTAMP_FORMAT)
                 modified = modified.replace(tzinfo=dt.timezone.utc)
+                assert is_utc_datetime(modified), modified
 
                 if size_str is None:
                     result[href] = FtpDir(path_str, modified)
@@ -93,7 +96,7 @@ class FtpDir(FtpPath):
 
 
 class FtpFile(FtpPath):
-    def __init__(self, path_str: str, modified: dt.datetime, size: int) -> None:
+    def __init__(self, path_str: str, modified: UtcDatetime, size: int) -> None:
         super().__init__(path_str, modified)
         assert not path_str.endswith("/"), path_str
 
@@ -115,7 +118,7 @@ class FtpFile(FtpPath):
         return f"compreq.pythonftp.FtpFile({self.path_str!r}, {self.modified!r}, {self.size!r})"
 
 
-ROOT = FtpDir("/", dt.datetime.now())
+ROOT = FtpDir("/", utc_now())
 
 
 def main() -> None:

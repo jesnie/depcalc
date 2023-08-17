@@ -30,6 +30,7 @@ from compreq.lazy import (
     get_marker,
 )
 from compreq.release import Release, ReleaseSet
+from compreq.time import UtcDatetime
 from compreq.versiontoken import VersionToken
 
 MAJOR = 0
@@ -184,7 +185,7 @@ def floor_ver(level: int, version: AnyVersion) -> LazyVersion:
 
 @dataclass(order=True, frozen=True)
 class MinAgeLazyReleaseSet(LazyReleaseSet):
-    now: dt.datetime | None
+    now: UtcDatetime | None
     min_age: dt.timedelta
     allow_empty: bool
     release_set: LazyReleaseSet
@@ -192,8 +193,7 @@ class MinAgeLazyReleaseSet(LazyReleaseSet):
     def resolve(self, context: PackageContext) -> ReleaseSet:
         release_set = self.release_set.resolve(context)
 
-        # TODO(jesnie): Get `now` from context.
-        now = dt.datetime.utcnow().replace(tzinfo=dt.timezone.utc) if self.now is None else self.now
+        now = self.now or context.now
         max_time = now - self.min_age
 
         result = {r for r in release_set.releases if r.released_time <= max_time}
@@ -205,7 +205,7 @@ class MinAgeLazyReleaseSet(LazyReleaseSet):
 def min_age(
     release_set: AnyReleaseSet | None = None,
     *,
-    now: dt.datetime | None = None,
+    now: UtcDatetime | None = None,
     days: int = 0,
     hours: int = 0,
     minutes: int = 0,
@@ -223,7 +223,7 @@ def min_age(
 
 @dataclass(order=True, frozen=True)
 class MaxAgeLazyReleaseSet(LazyReleaseSet):
-    now: dt.datetime | None
+    now: UtcDatetime | None
     max_age: dt.timedelta
     allow_empty: bool
     release_set: LazyReleaseSet
@@ -231,8 +231,7 @@ class MaxAgeLazyReleaseSet(LazyReleaseSet):
     def resolve(self, context: PackageContext) -> ReleaseSet:
         release_set = self.release_set.resolve(context)
 
-        # TODO(jesnie): Get `now` from context.
-        now = dt.datetime.utcnow().replace(tzinfo=dt.timezone.utc) if self.now is None else self.now
+        now = self.now or context.now
         min_time = now - self.max_age
 
         result = {r for r in release_set.releases if r.released_time >= min_time}
@@ -244,7 +243,7 @@ class MaxAgeLazyReleaseSet(LazyReleaseSet):
 def max_age(
     release_set: AnyReleaseSet | None = None,
     *,
-    now: dt.datetime | None = None,
+    now: UtcDatetime | None = None,
     days: int = 0,
     hours: int = 0,
     minutes: int = 0,

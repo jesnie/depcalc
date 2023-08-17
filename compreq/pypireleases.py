@@ -6,6 +6,7 @@ from dateutil.parser import isoparse
 from packaging.version import parse
 
 from compreq.release import Release, ReleaseSet, infer_and_set_successor
+from compreq.time import is_utc_datetime
 
 
 @cache
@@ -30,6 +31,8 @@ def get_pypi_releases(package: str) -> ReleaseSet:
 
         if released_time is None:
             continue
+
+        assert is_utc_datetime(released_time), released_time
 
         result.add(
             Release(
