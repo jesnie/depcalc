@@ -92,15 +92,15 @@ def main() -> None:
     default_range = o.version(
         ">=",
         o.floor_ver(
-            o.MINOR,
+            o.REL_MINOR,
             o.minimum_ver(
                 o.max_ver(o.min_age(years=1)),
                 o.min_ver(o.count(o.MINOR, 3)),
             ),
         ),
-    ) & o.version("<", o.ceil_ver(o.MAJOR, o.max_ver()))
-    dev_range = o.version(">=", o.floor_ver(o.MINOR, o.max_ver())) & o.version(
-        "<", o.ceil_ver(o.MINOR, o.max_ver())
+    ) & o.version("<", o.ceil_ver(o.REL_MAJOR, o.max_ver()))
+    dev_range = o.version(">=", o.floor_ver(o.REL_MINOR, o.max_ver())) & o.version(
+        "<", o.ceil_ver(o.REL_MINOR, o.max_ver())
     )
 
     set_dependencies(
