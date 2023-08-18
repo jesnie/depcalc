@@ -3,6 +3,7 @@
 import datetime as dt
 from dataclasses import dataclass, replace
 from itertools import chain
+from typing import Final
 
 from dateutil.relativedelta import relativedelta
 from packaging.version import Version
@@ -30,17 +31,27 @@ from compreq.lazy import (
     get_lazy_version,
     get_marker,
 )
+from compreq.levels import (
+    AnyLevel,
+    IntLevel,
+    Level,
+    RelativeToFirstNonZeroLevel,
+    get_level,
+)
 from compreq.release import Release, ReleaseSet
 from compreq.time import UtcDatetime
 from compreq.versiontoken import VersionToken
 
-MAJOR = 0
-MINOR = 1
-MICRO = 2
+MAJOR: Final[Level] = IntLevel(0)
+MINOR: Final[Level] = IntLevel(1)
+MICRO: Final[Level] = IntLevel(2)
+REL_MAJOR: Final[Level] = RelativeToFirstNonZeroLevel(0)
+REL_MINOR: Final[Level] = RelativeToFirstNonZeroLevel(1)
+REL_MICRO: Final[Level] = RelativeToFirstNonZeroLevel(3)
 
 
-version = VersionToken()
-v = version
+version: Final[VersionToken] = VersionToken()
+v: Final[VersionToken] = version
 
 
 def package(value: str) -> LazyRequirement:
@@ -139,7 +150,7 @@ def maximum_ver(*versions: AnyVersion) -> LazyVersion:
 
 @dataclass(order=True, frozen=True)
 class CeilLazyVersion(LazyVersion):
-    level: int
+    level: Level
     version: LazyVersion
 
     def resolve(self, context: PackageContext) -> Version:
@@ -147,23 +158,24 @@ class CeilLazyVersion(LazyVersion):
         return self.ceil(self.level, version)
 
     @staticmethod
-    def ceil(level: int, version: Version) -> Version:
+    def ceil(level: Level, version: Version) -> Version:
         release = version.release
+        i = level.index(version)
         ceil_release = chain(
-            release[:level],
-            [release[level] + 1],
-            (0 for _ in release[level + 1 :]),
+            release[:i],
+            [release[i] + 1],
+            (0 for _ in release[i + 1 :]),
         )
         return Version(f"{version.epoch}!" + ".".join(str(r) for r in ceil_release))
 
 
-def ceil_ver(level: int, version: AnyVersion) -> LazyVersion:
-    return CeilLazyVersion(level, get_lazy_version(version))
+def ceil_ver(level: AnyLevel, version: AnyVersion) -> LazyVersion:
+    return CeilLazyVersion(get_level(level), get_lazy_version(version))
 
 
 @dataclass(order=True, frozen=True)
 class FloorLazyVersion(LazyVersion):
-    level: int
+    level: Level
     version: LazyVersion
 
     def resolve(self, context: PackageContext) -> Version:
@@ -171,17 +183,18 @@ class FloorLazyVersion(LazyVersion):
         return self.floor(self.level, version)
 
     @staticmethod
-    def floor(level: int, version: Version) -> Version:
+    def floor(level: Level, version: Version) -> Version:
         release = version.release
+        i = level.index(version)
         floor_release = chain(
-            release[: level + 1],
-            (0 for _ in release[level + 1 :]),
+            release[: i + 1],
+            (0 for _ in release[i + 1 :]),
         )
         return Version(f"{version.epoch}!" + ".".join(str(r) for r in floor_release))
 
 
-def floor_ver(level: int, version: AnyVersion) -> LazyVersion:
-    return FloorLazyVersion(level, get_lazy_version(version))
+def floor_ver(level: AnyLevel, version: AnyVersion) -> LazyVersion:
+    return FloorLazyVersion(get_level(level), get_lazy_version(version))
 
 
 @dataclass(order=True, frozen=True)
@@ -278,14 +291,15 @@ def max_age(
 
 @dataclass(order=True, frozen=True)
 class CountLazyReleaseSet(LazyReleaseSet):
-    level: int
+    level: Level
     n: int
     release_set: LazyReleaseSet
 
     def resolve(self, context: PackageContext) -> ReleaseSet:
         release_set = self.release_set.resolve(context)
+        fixed_level = IntLevel(self.level.index(max(release_set.releases).version))
         unique_versions_at_level = {
-            FloorLazyVersion.floor(self.level, r.version) for r in release_set.releases
+            FloorLazyVersion.floor(fixed_level, r.version) for r in release_set.releases
         }
         min_version = sorted(unique_versions_at_level, reverse=True)[: self.n][-1]
         result = {r for r in release_set.releases if r.version >= min_version}
@@ -293,8 +307,8 @@ class CountLazyReleaseSet(LazyReleaseSet):
 
 
 def count(
-    level: int,
+    level: AnyLevel,
     n: int,
     release_set: AnyReleaseSet | None = None,
 ) -> LazyReleaseSet:
-    return CountLazyReleaseSet(level, n, get_lazy_release_set(release_set))
+    return CountLazyReleaseSet(get_level(level), n, get_lazy_release_set(release_set))

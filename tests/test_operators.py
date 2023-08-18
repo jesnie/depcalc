@@ -177,12 +177,22 @@ def test_maximum_ver(versions: Sequence[str], expected: str) -> None:
 @pytest.mark.parametrize(
     "level,version,expected",
     [
+        (o.REL_MAJOR, "1.2.3a4dev5", "2.0.0"),
         (o.MICRO, "1.2.3a4dev5", "1.2.4"),
         (o.MINOR, "1.2.3a4dev5", "1.3.0"),
         (o.MAJOR, "1.2.3a4dev5", "2.0.0"),
+        (o.REL_MAJOR, "0.1.0", "0.2.0"),
+        (o.MICRO, "0.1.0", "0.1.1"),
+        (o.MINOR, "0.1.0", "0.2.0"),
+        (o.MAJOR, "0.1.0", "1.0.0"),
+        (o.REL_MAJOR, "1!1.2.3a4dev5", "1!2.0.0"),
         (o.MICRO, "1!1.2.3a4dev5", "1!1.2.4"),
         (o.MINOR, "1!1.2.3a4dev5", "1!1.3.0"),
         (o.MAJOR, "1!1.2.3a4dev5", "1!2.0.0"),
+        (o.REL_MAJOR, "1!0.1.0", "1!0.2.0"),
+        (o.MICRO, "1!0.1.0", "1!0.1.1"),
+        (o.MINOR, "1!0.1.0", "1!0.2.0"),
+        (o.MAJOR, "1!0.1.0", "1!1.0.0"),
     ],
 )
 def test_ceil_ver(level: int, version: str, expected: str) -> None:
@@ -194,12 +204,22 @@ def test_ceil_ver(level: int, version: str, expected: str) -> None:
 @pytest.mark.parametrize(
     "level,version,expected",
     [
+        (o.REL_MAJOR, "1.2.3a4dev5", "1.0.0"),
         (o.MICRO, "1.2.3a4dev5", "1.2.3"),
         (o.MINOR, "1.2.3a4dev5", "1.2.0"),
         (o.MAJOR, "1.2.3a4dev5", "1.0.0"),
+        (o.REL_MAJOR, "0.1.0", "0.1.0"),
+        (o.MICRO, "0.1.0", "0.1.0"),
+        (o.MINOR, "0.1.0", "0.1.0"),
+        (o.MAJOR, "0.1.0", "0.0.0"),
+        (o.REL_MAJOR, "1!1.2.3a4dev5", "1!1.0.0"),
         (o.MICRO, "1!1.2.3a4dev5", "1!1.2.3"),
         (o.MINOR, "1!1.2.3a4dev5", "1!1.2.0"),
         (o.MAJOR, "1!1.2.3a4dev5", "1!1.0.0"),
+        (o.REL_MAJOR, "1!0.1.0", "1!0.1.0"),
+        (o.MICRO, "1!0.1.0", "1!0.1.0"),
+        (o.MINOR, "1!0.1.0", "1!0.1.0"),
+        (o.MAJOR, "1!0.1.0", "1!0.0.0"),
     ],
 )
 def test_floor_ver(level: int, version: str, expected: str) -> None:
