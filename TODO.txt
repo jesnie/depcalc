@@ -1,7 +1,6 @@
 * Faster Python release count?
 * Update GitHub actions.
 * Support tensorflow_probability -> Python version.
-* Support text requirements files.
 * Test everything.
 * Document everything.
 * Easily get bounds on specifier sets.
