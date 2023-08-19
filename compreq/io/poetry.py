@@ -68,7 +68,6 @@ class PoetryPyprojectFile(PyprojectFile):
         requirements_collection = (
             requirements.values() if hasattr(requirements, "values") else requirements
         )
-        assert isinstance(requirements_collection, Collection)
         requirements_toml = self._get_dependencies(group)
         requirements_toml.clear()
         for requirement in requirements_collection:
