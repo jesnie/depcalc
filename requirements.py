@@ -1,14 +1,12 @@
 import re
 from pathlib import Path
-from typing import Any
 
 from packaging.specifiers import SpecifierSet
-from packaging.version import InvalidVersion, parse
-from ruamel.yaml import YAML
 
 import compreq.operators as o
 from compreq.context import DefaultContext
 from compreq.io.poetry import PoetryPyprojectFile
+from compreq.io.re import TextReFile
 from compreq.lazy import AnySpecifierSet
 from compreq.release import ReleaseSet
 from compreq.root import CompReq
@@ -16,9 +14,9 @@ from compreq.root import CompReq
 
 def get_python_specifier(pyproject: PoetryPyprojectFile) -> SpecifierSet:
     prev_python = pyproject.get_requirements()["python"].specifier
-    match = re.fullmatch("<4.0.0,(>=.*)", str(prev_python))
+    match = re.fullmatch("<4(.0)*,(>=.*)", str(prev_python))
     assert match
-    return SpecifierSet(match[1])
+    return SpecifierSet(match[2])
 
 
 def set_python_version_in_github_actions(python_release_set: ReleaseSet) -> None:
@@ -29,28 +27,13 @@ def set_python_version_in_github_actions(python_release_set: ReleaseSet) -> None
         )
     )
     default_version = min(minor_versions)
+    minor_versions_str = ", ".join(f'"{v}"' for v in minor_versions)
+    default_version_str = str(default_version)
 
-    def update_python_version(yaml: Any) -> None:
-        if isinstance(yaml, dict):
-            if "python-version" in yaml:
-                try:
-                    parse(yaml["python-version"])
-                    yaml["python-version"] = str(default_version)
-                except InvalidVersion:
-                    pass
-            if "matrix" in yaml and "python" in yaml["matrix"]:
-                yaml["matrix"]["python"] = [str(v) for v in minor_versions]
-            for value in yaml.values():
-                update_python_version(value)
-        elif isinstance(yaml, list):
-            for value in yaml:
-                update_python_version(value)
-
-    yaml = YAML()
     for yaml_path in Path(".github/workflows").glob("*.yml"):
-        action = yaml.load(yaml_path)
-        update_python_version(action)
-        yaml.dump(action, yaml_path)
+        with TextReFile.open(yaml_path) as ref:
+            ref.sub(r"(^ +python-version: \")\d+\.\d+(\")$", rf"\g<1>{default_version_str}\g<2>")
+            ref.sub(r"(^ +matrix:\s^ +python: \[).*(\]$)", rf"\g<1>{minor_versions_str}\g<2>")
 
 
 def set_python_version(cr: CompReq, pyproject: PoetryPyprojectFile) -> AnySpecifierSet:
@@ -99,7 +82,6 @@ def main() -> None:
                 o.pkg("python") & python_specifiers,
                 o.pkg("python-dateutil") & default_range,
                 o.pkg("requests") & default_range,
-                o.pkg("ruamel.yaml") & default_range,
                 o.pkg("typing-extensions") & default_range,
             ],
         )
