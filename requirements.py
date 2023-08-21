@@ -1,22 +1,13 @@
-import re
 from pathlib import Path
 
-from packaging.specifiers import SpecifierSet
-
 import compreq.operators as o
+from compreq.bounds import get_bounds
 from compreq.context import DefaultContext
 from compreq.io.poetry import PoetryPyprojectFile
 from compreq.io.re import TextReFile
 from compreq.lazy import AnySpecifierSet
 from compreq.release import ReleaseSet
 from compreq.root import CompReq
-
-
-def get_python_specifier(pyproject: PoetryPyprojectFile) -> SpecifierSet:
-    prev_python = pyproject.get_requirements()["python"].specifier
-    match = re.fullmatch("<4(.0)*,(>=.*)", str(prev_python))
-    assert match
-    return SpecifierSet(match[2])
 
 
 def set_python_version_in_github_actions(python_release_set: ReleaseSet) -> None:
@@ -54,7 +45,10 @@ def set_python_version(cr: CompReq, pyproject: PoetryPyprojectFile) -> AnySpecif
 
 def main() -> None:
     with PoetryPyprojectFile.open() as pyproject:
-        ctx = DefaultContext(get_python_specifier(pyproject))
+        prev_python_specifiers = get_bounds(
+            pyproject.get_requirements()["python"].specifier
+        ).lower_specifier_set()
+        ctx = DefaultContext(prev_python_specifiers)
         cr = CompReq(ctx)
 
         python_specifiers = set_python_version(cr, pyproject)
