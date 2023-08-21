@@ -51,7 +51,7 @@ class PoetryPyprojectFile(PyprojectFile):
         for specifier in specifier_set.split(","):
             if specifier.startswith("^"):
                 version = Version(specifier[1:])
-                upper = CeilLazyVersion.ceil(REL_MAJOR, version)
+                upper = CeilLazyVersion.ceil(REL_MAJOR, version, keep_trailing_zeros=True)
                 result &= SpecifierSet(f"<{upper},>={version}")
             elif specifier.startswith("~"):
                 result &= SpecifierSet(f"~={specifier[1:]}")

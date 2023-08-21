@@ -3,7 +3,7 @@
 import datetime as dt
 from dataclasses import dataclass, replace
 from itertools import chain
-from typing import Final
+from typing import Final, Iterable
 
 from dateutil.relativedelta import relativedelta
 from packaging.version import Version
@@ -152,49 +152,52 @@ def maximum_ver(*versions: AnyVersion) -> LazyVersion:
 class CeilLazyVersion(LazyVersion):
     level: Level
     version: LazyVersion
+    keep_trailing_zeros: bool
 
     def resolve(self, context: PackageContext) -> Version:
         version = self.version.resolve(context)
-        return self.ceil(self.level, version)
+        return self.ceil(self.level, version, self.keep_trailing_zeros)
 
     @staticmethod
-    def ceil(level: Level, version: Version) -> Version:
+    def ceil(level: Level, version: Version, keep_trailing_zeros: bool) -> Version:
         release = version.release
         i = level.index(version)
-        ceil_release = chain(
-            release[:i],
-            [release[i] + 1],
-            (0 for _ in release[i + 1 :]),
-        )
+        ceil_release: Iterable[int] = chain(release[:i], [release[i] + 1])
+        if keep_trailing_zeros:
+            ceil_release = chain(ceil_release, (0 for _ in release[i + 1 :]))
         return Version(f"{version.epoch}!" + ".".join(str(r) for r in ceil_release))
 
 
-def ceil_ver(level: AnyLevel, version: AnyVersion) -> LazyVersion:
-    return CeilLazyVersion(get_level(level), get_lazy_version(version))
+def ceil_ver(
+    level: AnyLevel, version: AnyVersion, keep_trailing_zeros: bool = False
+) -> LazyVersion:
+    return CeilLazyVersion(get_level(level), get_lazy_version(version), keep_trailing_zeros)
 
 
 @dataclass(order=True, frozen=True)
 class FloorLazyVersion(LazyVersion):
     level: Level
     version: LazyVersion
+    keep_trailing_zeros: bool
 
     def resolve(self, context: PackageContext) -> Version:
         version = self.version.resolve(context)
-        return self.floor(self.level, version)
+        return self.floor(self.level, version, self.keep_trailing_zeros)
 
     @staticmethod
-    def floor(level: Level, version: Version) -> Version:
+    def floor(level: Level, version: Version, keep_trailing_zeros: bool) -> Version:
         release = version.release
         i = level.index(version)
-        floor_release = chain(
-            release[: i + 1],
-            (0 for _ in release[i + 1 :]),
-        )
+        floor_release: Iterable[int] = release[: i + 1]
+        if keep_trailing_zeros:
+            floor_release = chain(floor_release, (0 for _ in release[i + 1 :]))
         return Version(f"{version.epoch}!" + ".".join(str(r) for r in floor_release))
 
 
-def floor_ver(level: AnyLevel, version: AnyVersion) -> LazyVersion:
-    return FloorLazyVersion(get_level(level), get_lazy_version(version))
+def floor_ver(
+    level: AnyLevel, version: AnyVersion, keep_trailing_zeros: bool = False
+) -> LazyVersion:
+    return FloorLazyVersion(get_level(level), get_lazy_version(version), keep_trailing_zeros)
 
 
 @dataclass(order=True, frozen=True)
@@ -299,7 +302,8 @@ class CountLazyReleaseSet(LazyReleaseSet):
         release_set = self.release_set.resolve(context)
         fixed_level = IntLevel(self.level.index(max(release_set.releases).version))
         unique_versions_at_level = {
-            FloorLazyVersion.floor(fixed_level, r.version) for r in release_set.releases
+            FloorLazyVersion.floor(fixed_level, r.version, keep_trailing_zeros=False)
+            for r in release_set.releases
         }
         min_version = sorted(unique_versions_at_level, reverse=True)[: self.n][-1]
         result = {r for r in release_set.releases if r.version >= min_version}
