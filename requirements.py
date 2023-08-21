@@ -1,11 +1,16 @@
 import re
+from pathlib import Path
+from typing import Any
 
 from packaging.specifiers import SpecifierSet
+from packaging.version import InvalidVersion, parse
+from ruamel.yaml import YAML
 
 import compreq.operators as o
 from compreq.context import DefaultContext
 from compreq.io.poetry import PoetryPyprojectFile
 from compreq.lazy import AnySpecifierSet
+from compreq.release import ReleaseSet
 from compreq.root import CompReq
 
 
@@ -16,12 +21,45 @@ def get_python_specifier(pyproject: PoetryPyprojectFile) -> SpecifierSet:
     return SpecifierSet(match[1])
 
 
+def set_python_version_in_github_actions(python_release_set: ReleaseSet) -> None:
+    minor_versions = sorted(
+        set(
+            o.FloorLazyVersion.floor(o.MINOR, r.version, keep_trailing_zeros=False)
+            for r in python_release_set.releases
+        )
+    )
+    default_version = min(minor_versions)
+
+    def update_python_version(yaml: Any) -> None:
+        if isinstance(yaml, dict):
+            if "python-version" in yaml:
+                try:
+                    parse(yaml["python-version"])
+                    yaml["python-version"] = str(default_version)
+                except InvalidVersion:
+                    pass
+            if "matrix" in yaml and "python" in yaml["matrix"]:
+                yaml["matrix"]["python"] = [str(v) for v in minor_versions]
+            for value in yaml.values():
+                update_python_version(value)
+        elif isinstance(yaml, list):
+            for value in yaml:
+                update_python_version(value)
+
+    yaml = YAML()
+    for yaml_path in Path(".github/workflows").glob("*.yml"):
+        action = yaml.load(yaml_path)
+        update_python_version(action)
+        yaml.dump(action, yaml_path)
+
+
 def set_python_version(cr: CompReq, pyproject: PoetryPyprojectFile) -> AnySpecifierSet:
     floor = cr.resolve_version("python", o.floor_ver(o.MINOR, o.max_ver(o.min_age(years=3))))
     ceil = cr.resolve_version("python", o.ceil_ver(o.MAJOR, o.max_ver()))
     specfiers = o.version(">=", floor) & o.version("<", ceil)
 
     pyproject.set_python_classifiers(cr, specfiers)
+    set_python_version_in_github_actions(cr.resolve_release_set("python", specfiers))
 
     tool = pyproject.toml["tool"]
     tool["isort"]["py_version"] = int(f"{floor.major}{floor.minor}")
@@ -61,6 +99,7 @@ def main() -> None:
                 o.pkg("python") & python_specifiers,
                 o.pkg("python-dateutil") & default_range,
                 o.pkg("requests") & default_range,
+                o.pkg("ruamel.yaml") & default_range,
                 o.pkg("typing-extensions") & default_range,
             ],
         )

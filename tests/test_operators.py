@@ -17,6 +17,7 @@ from compreq.lazy import (
     get_lazy_specifier_set,
     get_marker,
 )
+from compreq.levels import Level
 from compreq.versiontoken import VersionToken
 from tests.utils import fake_release, fake_release_set, utc
 
@@ -175,56 +176,88 @@ def test_maximum_ver(versions: Sequence[str], expected: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "level,version,expected",
+    "level,version,keep_trailing_zeros,expected",
     [
-        (o.REL_MAJOR, "1.2.3a4dev5", "2.0.0"),
-        (o.MICRO, "1.2.3a4dev5", "1.2.4"),
-        (o.MINOR, "1.2.3a4dev5", "1.3.0"),
-        (o.MAJOR, "1.2.3a4dev5", "2.0.0"),
-        (o.REL_MAJOR, "0.1.0", "0.2.0"),
-        (o.MICRO, "0.1.0", "0.1.1"),
-        (o.MINOR, "0.1.0", "0.2.0"),
-        (o.MAJOR, "0.1.0", "1.0.0"),
-        (o.REL_MAJOR, "1!1.2.3a4dev5", "1!2.0.0"),
-        (o.MICRO, "1!1.2.3a4dev5", "1!1.2.4"),
-        (o.MINOR, "1!1.2.3a4dev5", "1!1.3.0"),
-        (o.MAJOR, "1!1.2.3a4dev5", "1!2.0.0"),
-        (o.REL_MAJOR, "1!0.1.0", "1!0.2.0"),
-        (o.MICRO, "1!0.1.0", "1!0.1.1"),
-        (o.MINOR, "1!0.1.0", "1!0.2.0"),
-        (o.MAJOR, "1!0.1.0", "1!1.0.0"),
+        (o.REL_MAJOR, "1.2.3a4dev5", True, "2.0.0"),
+        (o.MICRO, "1.2.3a4dev5", True, "1.2.4"),
+        (o.MINOR, "1.2.3a4dev5", True, "1.3.0"),
+        (o.MAJOR, "1.2.3a4dev5", True, "2.0.0"),
+        (o.REL_MAJOR, "0.1.0", True, "0.2.0"),
+        (o.MICRO, "0.1.0", True, "0.1.1"),
+        (o.MINOR, "0.1.0", True, "0.2.0"),
+        (o.MAJOR, "0.1.0", True, "1.0.0"),
+        (o.REL_MAJOR, "1!1.2.3a4dev5", True, "1!2.0.0"),
+        (o.MICRO, "1!1.2.3a4dev5", True, "1!1.2.4"),
+        (o.MINOR, "1!1.2.3a4dev5", True, "1!1.3.0"),
+        (o.MAJOR, "1!1.2.3a4dev5", True, "1!2.0.0"),
+        (o.REL_MAJOR, "1!0.1.0", True, "1!0.2.0"),
+        (o.MICRO, "1!0.1.0", True, "1!0.1.1"),
+        (o.MINOR, "1!0.1.0", True, "1!0.2.0"),
+        (o.MAJOR, "1!0.1.0", True, "1!1.0.0"),
+        (o.REL_MAJOR, "1.2.3a4dev5", False, "2"),
+        (o.MICRO, "1.2.3a4dev5", False, "1.2.4"),
+        (o.MINOR, "1.2.3a4dev5", False, "1.3"),
+        (o.MAJOR, "1.2.3a4dev5", False, "2"),
+        (o.REL_MAJOR, "0.1.0", False, "0.2"),
+        (o.MICRO, "0.1.0", False, "0.1.1"),
+        (o.MINOR, "0.1.0", False, "0.2"),
+        (o.MAJOR, "0.1.0", False, "1"),
+        (o.REL_MAJOR, "1!1.2.3a4dev5", False, "1!2"),
+        (o.MICRO, "1!1.2.3a4dev5", False, "1!1.2.4"),
+        (o.MINOR, "1!1.2.3a4dev5", False, "1!1.3"),
+        (o.MAJOR, "1!1.2.3a4dev5", False, "1!2"),
+        (o.REL_MAJOR, "1!0.1.0", False, "1!0.2"),
+        (o.MICRO, "1!0.1.0", False, "1!0.1.1"),
+        (o.MINOR, "1!0.1.0", False, "1!0.2"),
+        (o.MAJOR, "1!0.1.0", False, "1!1"),
     ],
 )
-def test_ceil_ver(level: int, version: str, expected: str) -> None:
+def test_ceil_ver(level: Level, version: str, keep_trailing_zeros: bool, expected: str) -> None:
     context = MagicMock(PackageContext)
-    ceil_ver = o.ceil_ver(level, version)
+    ceil_ver = o.ceil_ver(level, version, keep_trailing_zeros)
     assert Version(expected) == ceil_ver.resolve(context)
 
 
 @pytest.mark.parametrize(
-    "level,version,expected",
+    "level,version,keep_trailing_zeros,expected",
     [
-        (o.REL_MAJOR, "1.2.3a4dev5", "1.0.0"),
-        (o.MICRO, "1.2.3a4dev5", "1.2.3"),
-        (o.MINOR, "1.2.3a4dev5", "1.2.0"),
-        (o.MAJOR, "1.2.3a4dev5", "1.0.0"),
-        (o.REL_MAJOR, "0.1.0", "0.1.0"),
-        (o.MICRO, "0.1.0", "0.1.0"),
-        (o.MINOR, "0.1.0", "0.1.0"),
-        (o.MAJOR, "0.1.0", "0.0.0"),
-        (o.REL_MAJOR, "1!1.2.3a4dev5", "1!1.0.0"),
-        (o.MICRO, "1!1.2.3a4dev5", "1!1.2.3"),
-        (o.MINOR, "1!1.2.3a4dev5", "1!1.2.0"),
-        (o.MAJOR, "1!1.2.3a4dev5", "1!1.0.0"),
-        (o.REL_MAJOR, "1!0.1.0", "1!0.1.0"),
-        (o.MICRO, "1!0.1.0", "1!0.1.0"),
-        (o.MINOR, "1!0.1.0", "1!0.1.0"),
-        (o.MAJOR, "1!0.1.0", "1!0.0.0"),
+        (o.REL_MAJOR, "1.2.3a4dev5", True, "1.0.0"),
+        (o.MICRO, "1.2.3a4dev5", True, "1.2.3"),
+        (o.MINOR, "1.2.3a4dev5", True, "1.2.0"),
+        (o.MAJOR, "1.2.3a4dev5", True, "1.0.0"),
+        (o.REL_MAJOR, "0.1.0", True, "0.1.0"),
+        (o.MICRO, "0.1.0", True, "0.1.0"),
+        (o.MINOR, "0.1.0", True, "0.1.0"),
+        (o.MAJOR, "0.1.0", True, "0.0.0"),
+        (o.REL_MAJOR, "1!1.2.3a4dev5", True, "1!1.0.0"),
+        (o.MICRO, "1!1.2.3a4dev5", True, "1!1.2.3"),
+        (o.MINOR, "1!1.2.3a4dev5", True, "1!1.2.0"),
+        (o.MAJOR, "1!1.2.3a4dev5", True, "1!1.0.0"),
+        (o.REL_MAJOR, "1!0.1.0", True, "1!0.1.0"),
+        (o.MICRO, "1!0.1.0", True, "1!0.1.0"),
+        (o.MINOR, "1!0.1.0", True, "1!0.1.0"),
+        (o.MAJOR, "1!0.1.0", True, "1!0.0.0"),
+        (o.REL_MAJOR, "1.2.3a4dev5", False, "1"),
+        (o.MICRO, "1.2.3a4dev5", False, "1.2.3"),
+        (o.MINOR, "1.2.3a4dev5", False, "1.2"),
+        (o.MAJOR, "1.2.3a4dev5", False, "1"),
+        (o.REL_MAJOR, "0.1.0", False, "0.1"),
+        (o.MICRO, "0.1.0", False, "0.1.0"),
+        (o.MINOR, "0.1.0", False, "0.1"),
+        (o.MAJOR, "0.1.0", False, "0"),
+        (o.REL_MAJOR, "1!1.2.3a4dev5", False, "1!1"),
+        (o.MICRO, "1!1.2.3a4dev5", False, "1!1.2.3"),
+        (o.MINOR, "1!1.2.3a4dev5", False, "1!1.2"),
+        (o.MAJOR, "1!1.2.3a4dev5", False, "1!1"),
+        (o.REL_MAJOR, "1!0.1.0", False, "1!0.1"),
+        (o.MICRO, "1!0.1.0", False, "1!0.1.0"),
+        (o.MINOR, "1!0.1.0", False, "1!0.1"),
+        (o.MAJOR, "1!0.1.0", False, "1!0"),
     ],
 )
-def test_floor_ver(level: int, version: str, expected: str) -> None:
+def test_floor_ver(level: Level, version: str, keep_trailing_zeros: bool, expected: str) -> None:
     context = MagicMock(PackageContext)
-    floor_ver = o.floor_ver(level, version)
+    floor_ver = o.floor_ver(level, version, keep_trailing_zeros)
     assert Version(expected) == floor_ver.resolve(context)
 
 
@@ -511,7 +544,7 @@ def test_max_age__empty_not_allowed() -> None:
         ),
     ],
 )
-def test_count(level: int, n: int, releases: Collection[str], expected: Collection[str]) -> None:
+def test_count(level: Level, n: int, releases: Collection[str], expected: Collection[str]) -> None:
     release_set = fake_release_set(releases=releases, infer_successors=False)
     context = MagicMock(PackageContext)
     context.package = "compreq"

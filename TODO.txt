@@ -2,9 +2,12 @@
 * Update GitHub actions.
 * Support tensorflow_probability -> Python version.
 * Test everything.
+  - Names with a dot in them.
 * Document everything.
 * Easily get bounds on specifier sets.
 * Compute consistent lower bound?
+* Have a VersionSet?
+* Consistent use of singular vs plural?
 
 
 Alternatives:
