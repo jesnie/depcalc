@@ -119,14 +119,3 @@ class FtpFile(FtpPath):
 
 
 ROOT = FtpDir("/", utc_now())
-
-
-def main() -> None:
-    children = ROOT.ls()
-    print(children)
-    print(children["python/"].as_dir().ls())
-    print(children["README.txt"].as_file().read_text())
-
-
-if __name__ == "__main__":
-    main()

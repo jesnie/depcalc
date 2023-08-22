@@ -14,8 +14,8 @@ def get_pypi_releases(package: str) -> ReleaseSet:
     url = f"https://pypi.org/pypi/{package}/json"
     data = requests.get(url, timeout=600.0).json()
     result = set()
-    for release, release_data in data["releases"].items():
-        version = parse(release)
+    for version_str, release_data in data["releases"].items():
+        version = parse(version_str)
         released_time: dt.datetime | None = None
 
         for file_data in release_data:
@@ -44,12 +44,3 @@ def get_pypi_releases(package: str) -> ReleaseSet:
         )
 
     return infer_and_set_successor(ReleaseSet(package, result))
-
-
-def main() -> None:
-    for v in sorted(get_pypi_releases("tensorflow").releases):
-        print(v)
-
-
-if __name__ == "__main__":
-    main()

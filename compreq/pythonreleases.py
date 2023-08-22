@@ -47,12 +47,3 @@ def get_python_releases(python_specifiers: SpecifierSet) -> ReleaseSet:
             )
 
     return infer_and_set_successor(ReleaseSet("python", result))
-
-
-def main() -> None:
-    for v in sorted(get_python_releases(SpecifierSet(">=3.9")).releases):
-        print(v)
-
-
-if __name__ == "__main__":
-    main()
