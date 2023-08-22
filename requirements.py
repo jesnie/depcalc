@@ -2,12 +2,12 @@ from pathlib import Path
 
 import compreq.operators as o
 from compreq.bounds import get_bounds
-from compreq.context import DefaultContext
+from compreq.contexts import DefaultContext
 from compreq.io.poetry import PoetryPyprojectFile
 from compreq.io.re import TextReFile
 from compreq.lazy import AnySpecifierSet
-from compreq.release import ReleaseSet
-from compreq.root import CompReq
+from compreq.releases import ReleaseSet
+from compreq.roots import CompReq
 
 
 def set_python_version_in_github_actions(python_release_set: ReleaseSet) -> None:

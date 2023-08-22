@@ -5,7 +5,7 @@ from packaging.specifiers import SpecifierSet
 from packaging.version import VERSION_PATTERN, Version, parse
 
 from compreq.pythonftp import ROOT
-from compreq.release import Release, ReleaseSet, infer_and_set_successor
+from compreq.releases import Release, ReleaseSet, infer_and_set_successor
 
 RELEASE_DIR_RE = re.compile(r"(" + VERSION_PATTERN + r")/", re.VERBOSE | re.IGNORECASE)
 VERSION_TGZ_RE = re.compile(r"Python-(" + VERSION_PATTERN + r").tgz", re.VERBOSE | re.IGNORECASE)

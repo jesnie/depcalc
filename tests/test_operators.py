@@ -6,7 +6,7 @@ import pytest
 from packaging.version import Version
 
 import compreq.operators as o
-from compreq.context import PackageContext
+from compreq.contexts import PackageContext
 from compreq.lazy import (
     AllLazyReleaseSet,
     LazyRequirement,
@@ -18,7 +18,7 @@ from compreq.lazy import (
     get_marker,
 )
 from compreq.levels import Level
-from compreq.versiontoken import VersionToken
+from compreq.versiontokens import VersionToken
 from tests.utils import fake_release, fake_release_set, utc
 
 

@@ -7,7 +7,7 @@ from typing import Any, Iterator
 from tomlkit import dump, dumps, load
 from typing_extensions import Self
 
-from compreq.path import AnyPath
+from compreq.paths import AnyPath
 
 
 class PyprojectFile:

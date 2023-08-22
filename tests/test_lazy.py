@@ -8,7 +8,7 @@ from packaging.specifiers import Specifier, SpecifierSet
 from packaging.version import Version
 
 import compreq.operators as o
-from compreq.context import Context, PackageContext
+from compreq.contexts import Context, PackageContext
 from compreq.lazy import (
     AllLazyReleaseSet,
     AnyMarker,
@@ -42,7 +42,7 @@ from compreq.lazy import (
     get_marker,
     get_specifier_operator,
 )
-from compreq.release import ReleaseSet
+from compreq.releases import ReleaseSet
 from tests.utils import fake_release, fake_release_set
 
 

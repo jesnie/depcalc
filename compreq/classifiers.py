@@ -1,7 +1,7 @@
 from typing import Sequence
 
 from compreq.lazy import AnyReleaseSet
-from compreq.root import CompReq
+from compreq.roots import CompReq
 
 
 def get_python_classifiers(cr: CompReq, python_releases: AnyReleaseSet) -> list[str]:

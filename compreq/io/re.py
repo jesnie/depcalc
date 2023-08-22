@@ -7,7 +7,7 @@ from typing import Callable, Iterator
 
 from typing_extensions import Self
 
-from compreq.path import AnyPath
+from compreq.paths import AnyPath
 
 
 class TextReFile:

@@ -4,8 +4,6 @@
   - Names with a dot in them.
 * Document everything.
 * Compute consistent lower bound?
-* Have a VersionSet?
-* Consistent use of singular vs plural?
 
 
 Alternatives:

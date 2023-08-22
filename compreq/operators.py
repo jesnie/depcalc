@@ -8,7 +8,7 @@ from typing import Final, Iterable
 from dateutil.relativedelta import relativedelta
 from packaging.version import Version
 
-from compreq.context import PackageContext
+from compreq.contexts import PackageContext
 from compreq.lazy import (
     EMPTY_REQUIREMENT,
     AllLazyReleaseSet,
@@ -38,9 +38,9 @@ from compreq.levels import (
     RelativeToFirstNonZeroLevel,
     get_level,
 )
-from compreq.release import Release, ReleaseSet
+from compreq.releases import Release, ReleaseSet
 from compreq.time import UtcDatetime
-from compreq.versiontoken import VersionToken
+from compreq.versiontokens import VersionToken
 
 MAJOR: Final[Level] = IntLevel(0)
 MINOR: Final[Level] = IntLevel(1)
