@@ -10,7 +10,7 @@ from compreq.classifiers import set_python_classifiers
 from compreq.io.pyproject import PyprojectFile
 from compreq.lazy import AnyReleaseSet, AnyRequirement
 from compreq.operators import REL_MAJOR, CeilLazyVersion
-from compreq.root import CompReq
+from compreq.roots import CompReq
 
 
 class PoetryPyprojectFile(PyprojectFile):

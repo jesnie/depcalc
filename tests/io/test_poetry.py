@@ -12,10 +12,10 @@ from unittest.mock import MagicMock
 
 from packaging.requirements import Requirement
 
-from compreq.context import Context
+from compreq.contexts import Context
 from compreq.io.poetry import PoetryPyprojectFile
 from compreq.lazy import get_lazy_release_set, get_lazy_requirement
-from compreq.root import CompReq
+from compreq.roots import CompReq
 from tests.utils import fake_release_set
 
 PYPROJECT_CONTENTS = """

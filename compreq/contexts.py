@@ -6,7 +6,7 @@ from packaging.specifiers import SpecifierSet
 
 from compreq.pypireleases import get_pypi_releases
 from compreq.pythonreleases import get_python_releases
-from compreq.release import ReleaseSet
+from compreq.releases import ReleaseSet
 from compreq.time import UtcDatetime, is_utc_datetime, utc_now
 
 

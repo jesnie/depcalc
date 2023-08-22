@@ -8,8 +8,8 @@ from packaging.requirements import Requirement
 from typing_extensions import Self
 
 from compreq.lazy import AnyRequirement
-from compreq.path import AnyPath
-from compreq.root import CompReq
+from compreq.paths import AnyPath
+from compreq.roots import CompReq
 
 
 class TextRequirementsFile:

@@ -4,7 +4,7 @@ from packaging.requirements import Requirement
 from packaging.specifiers import Specifier, SpecifierSet
 from packaging.version import Version
 
-from compreq.context import Context, DefaultContext
+from compreq.contexts import Context, DefaultContext
 from compreq.lazy import (
     AnyRelease,
     AnyReleaseSet,
@@ -19,7 +19,7 @@ from compreq.lazy import (
     get_lazy_specifier_set,
     get_lazy_version,
 )
-from compreq.release import Release, ReleaseSet
+from compreq.releases import Release, ReleaseSet
 
 
 class CompReq:

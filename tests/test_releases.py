@@ -1,6 +1,6 @@
 from packaging.version import Version
 
-from compreq.release import ReleaseSet, infer_and_set_successor, infer_successor
+from compreq.releases import ReleaseSet, infer_and_set_successor, infer_successor
 from tests.utils import fake_release
 
 

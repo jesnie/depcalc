@@ -3,7 +3,7 @@ from typing import Collection
 
 from packaging.version import Version
 
-from compreq.release import Release, ReleaseSet, infer_and_set_successor
+from compreq.releases import Release, ReleaseSet, infer_and_set_successor
 from compreq.time import UtcDatetime, is_utc_datetime
 
 
