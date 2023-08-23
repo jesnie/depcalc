@@ -1,9 +1,8 @@
 * Faster Python release count?
 * Support tensorflow_probability -> Python version.
-* Test everything.
-  - Names with a dot in them.
 * Document everything.
 * Compute consistent lower bound?
+* Export stuff in __all__ in __init__.py
 
 
 Alternatives:

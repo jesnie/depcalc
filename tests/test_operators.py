@@ -31,9 +31,9 @@ def test_version() -> None:
     "requirement,expected",
     [
         (
-            o.package("compreq"),
+            o.package("foo.bar"),
             LazyRequirement(
-                package="compreq",
+                package="foo.bar",
                 url=None,
                 extras=set(),
                 specifier=LazySpecifierSet(set()),
@@ -41,9 +41,9 @@ def test_version() -> None:
             ),
         ),
         (
-            o.pkg("compreq"),
+            o.pkg("foo.bar"),
             LazyRequirement(
-                package="compreq",
+                package="foo.bar",
                 url=None,
                 extras=set(),
                 specifier=LazySpecifierSet(set()),
@@ -96,17 +96,17 @@ def test_factories(requirement: LazyRequirement, expected: LazyRequirement) -> N
 
 def test_releases() -> None:
     assert ProdLazyReleaseSet(AllLazyReleaseSet(None)) == o.releases()
-    assert ProdLazyReleaseSet(AllLazyReleaseSet("compreq")) == o.releases("compreq")
+    assert ProdLazyReleaseSet(AllLazyReleaseSet("foo.bar")) == o.releases("foo.bar")
 
 
 def test_prereleases() -> None:
     assert PreLazyReleaseSet(AllLazyReleaseSet(None)) == o.prereleases()
-    assert PreLazyReleaseSet(AllLazyReleaseSet("compreq")) == o.prereleases("compreq")
+    assert PreLazyReleaseSet(AllLazyReleaseSet("foo.bar")) == o.prereleases("foo.bar")
 
 
 def test_devreleases() -> None:
     assert AllLazyReleaseSet(None) == o.devreleases()
-    assert AllLazyReleaseSet("compreq") == o.devreleases("compreq")
+    assert AllLazyReleaseSet("foo.bar") == o.devreleases("foo.bar")
 
 
 @pytest.mark.parametrize(
@@ -122,10 +122,10 @@ def test_devreleases() -> None:
 def test_min_ver(releases: Collection[str], expected: str) -> None:
     release_set = fake_release_set(releases=releases, infer_successors=False)
     context = MagicMock(PackageContext)
-    context.package = "compreq"
+    context.package = "foo.bar"
     min_ver = o.min_ver(release_set)
     assert fake_release(version=expected) == min_ver.resolve(context)
-    assert context.releases.called_once_with("compreq")
+    assert context.releases.called_once_with("foo.bar")
 
 
 @pytest.mark.parametrize(
@@ -141,10 +141,10 @@ def test_min_ver(releases: Collection[str], expected: str) -> None:
 def test_max_ver(releases: Collection[str], expected: str) -> None:
     release_set = fake_release_set(releases=releases, infer_successors=False)
     context = MagicMock(PackageContext)
-    context.package = "compreq"
+    context.package = "foo.bar"
     max_ver = o.max_ver(release_set)
     assert fake_release(version=expected) == max_ver.resolve(context)
-    assert context.releases.called_once_with("compreq")
+    assert context.releases.called_once_with("foo.bar")
 
 
 @pytest.mark.parametrize(
@@ -263,7 +263,7 @@ def test_floor_ver(level: Level, version: str, keep_trailing_zeros: bool, expect
 
 def test_min_age() -> None:
     context = MagicMock(PackageContext)
-    context.package = "compreq"
+    context.package = "foo.bar"
     release_set = fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -290,7 +290,7 @@ def test_min_age() -> None:
 
 def test_min_age__context_now() -> None:
     context = MagicMock(PackageContext)
-    context.package = "compreq"
+    context.package = "foo.bar"
     context.now = utc(dt.datetime(2023, 8, 16, 16, 5, 0))
 
     release_set = fake_release_set(
@@ -317,7 +317,7 @@ def test_min_age__context_now() -> None:
 
 def test_min_age__empty_allowed() -> None:
     context = MagicMock(PackageContext)
-    context.package = "compreq"
+    context.package = "foo.bar"
     release_set = fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -339,7 +339,7 @@ def test_min_age__empty_allowed() -> None:
 
 def test_min_age__empty_not_allowed() -> None:
     context = MagicMock(PackageContext)
-    context.package = "compreq"
+    context.package = "foo.bar"
     release_set = fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -363,7 +363,7 @@ def test_min_age__empty_not_allowed() -> None:
 
 def test_max_age() -> None:
     context = MagicMock(PackageContext)
-    context.package = "compreq"
+    context.package = "foo.bar"
     release_set = fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -389,7 +389,7 @@ def test_max_age() -> None:
 
 def test_max_age__context_now() -> None:
     context = MagicMock(PackageContext)
-    context.package = "compreq"
+    context.package = "foo.bar"
     context.now = utc(dt.datetime(2023, 8, 16, 16, 5, 0))
     release_set = fake_release_set(
         releases=[
@@ -414,7 +414,7 @@ def test_max_age__context_now() -> None:
 
 def test_max_age__empty_allowed() -> None:
     context = MagicMock(PackageContext)
-    context.package = "compreq"
+    context.package = "foo.bar"
     release_set = fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -436,7 +436,7 @@ def test_max_age__empty_allowed() -> None:
 
 def test_max_age__empty_not_allowed() -> None:
     context = MagicMock(PackageContext)
-    context.package = "compreq"
+    context.package = "foo.bar"
     release_set = fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -547,7 +547,7 @@ def test_max_age__empty_not_allowed() -> None:
 def test_count(level: Level, n: int, releases: Collection[str], expected: Collection[str]) -> None:
     release_set = fake_release_set(releases=releases, infer_successors=False)
     context = MagicMock(PackageContext)
-    context.package = "compreq"
+    context.package = "foo.bar"
     count = o.count(level, n, release_set)
 
     assert fake_release_set(releases=expected, infer_successors=False) == count.resolve(context)

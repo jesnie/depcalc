@@ -55,7 +55,7 @@ def test_infer_superseded() -> None:
     before_r210a1 = fake_release(version="2.1.0a1", successor=None)
     before_r200 = fake_release(version="2.0.0", successor=None)
     before = ReleaseSet(
-        "compreq",
+        "foo.bar",
         {
             before_r200,
             before_r210a1,
@@ -75,7 +75,7 @@ def test_infer_superseded() -> None:
     after_r210a1 = fake_release(version="2.1.0a1", successor=after_r210a2)
     after_r200 = fake_release(version="2.0.0", successor=after_r210)
     after = ReleaseSet(
-        "compreq",
+        "foo.bar",
         {
             after_r200,
             after_r210a1,
