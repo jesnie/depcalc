@@ -31,24 +31,10 @@ from compreq.lazy import (
     get_lazy_version,
     get_marker,
 )
-from compreq.levels import (
-    AnyLevel,
-    IntLevel,
-    Level,
-    RelativeToFirstNonZeroLevel,
-    get_level,
-)
+from compreq.levels import AnyLevel, IntLevel, Level, get_level
 from compreq.releases import Release, ReleaseSet
 from compreq.time import UtcDatetime
 from compreq.versiontokens import VersionToken
-
-MAJOR: Final[Level] = IntLevel(0)
-MINOR: Final[Level] = IntLevel(1)
-MICRO: Final[Level] = IntLevel(2)
-REL_MAJOR: Final[Level] = RelativeToFirstNonZeroLevel(0)
-REL_MINOR: Final[Level] = RelativeToFirstNonZeroLevel(1)
-REL_MICRO: Final[Level] = RelativeToFirstNonZeroLevel(3)
-
 
 version: Final[VersionToken] = VersionToken()
 v: Final[VersionToken] = version

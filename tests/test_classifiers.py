@@ -1,8 +1,6 @@
 from unittest.mock import MagicMock
 
-from compreq.classifiers import set_python_classifiers
-from compreq.lazy import get_lazy_release_set
-from compreq.roots import CompReq
+from compreq import CompReq, get_lazy_release_set, set_python_classifiers
 from tests.utils import fake_release_set
 
 
