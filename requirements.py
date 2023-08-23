@@ -73,6 +73,7 @@ def main() -> None:
                 cr.pkg("python") & python_specifiers,
                 cr.pkg("python-dateutil") & default_range,
                 cr.pkg("requests") & default_range,
+                cr.pkg("tomlkit") & default_range,
                 cr.pkg("typing-extensions") & default_range,
             ],
         )
@@ -85,7 +86,6 @@ def main() -> None:
                 cr.pkg("pylint") & dev_range,
                 cr.pkg("pytest") & dev_range,
                 cr.pkg("taskipy") & dev_range,
-                cr.pkg("tomlkit") & dev_range,
                 cr.pkg("types-beautifulsoup4") & default_range,
                 cr.pkg("types-python-dateutil") & default_range,
                 cr.pkg("types-requests") & default_range,
