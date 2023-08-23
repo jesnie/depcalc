@@ -105,6 +105,8 @@ from compreq.roots import CompReq
 from compreq.time import UtcDatetime, is_utc_datetime, utc_now
 from compreq.versiontokens import VersionToken
 
+__version__ = "0.1.0"
+
 __all__ = [
     "AllLazyReleaseSet",
     "AnyLevel",
@@ -169,6 +171,7 @@ __all__ = [
     "Url",
     "UtcDatetime",
     "VersionToken",
+    "__version__",
     "ceil_ver",
     "compose",
     "count",
