@@ -3,7 +3,7 @@ from typing import Any
 
 import pytest
 
-from compreq.time import is_utc_datetime, utc_now
+from compreq import is_utc_datetime, utc_now
 
 
 @pytest.mark.parametrize(

@@ -4,7 +4,7 @@ import pytest
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 
-from compreq.bounds import Bounds, get_bounds
+from compreq import Bounds, get_bounds
 
 
 def specifier_set_id(key: Any) -> str | None:

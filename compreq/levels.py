@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import TypeAlias
+from typing import Final, TypeAlias
 
 from packaging.version import Version
 
@@ -31,6 +31,14 @@ class RelativeToFirstNonZeroLevel(Level):
             if r != 0:
                 return i + self.relative_level
         raise AssertionError(f"No non-zero segment found in {version}")
+
+
+MAJOR: Final[Level] = IntLevel(0)
+MINOR: Final[Level] = IntLevel(1)
+MICRO: Final[Level] = IntLevel(2)
+REL_MAJOR: Final[Level] = RelativeToFirstNonZeroLevel(0)
+REL_MINOR: Final[Level] = RelativeToFirstNonZeroLevel(1)
+REL_MICRO: Final[Level] = RelativeToFirstNonZeroLevel(3)
 
 
 AnyLevel: TypeAlias = int | Level

@@ -6,8 +6,13 @@ from typing import Collection, Mapping
 
 from packaging.version import Version
 
-from compreq.releases import Release, ReleaseSet, infer_and_set_successor
-from compreq.time import UtcDatetime, is_utc_datetime
+from compreq import (
+    Release,
+    ReleaseSet,
+    UtcDatetime,
+    infer_and_set_successor,
+    is_utc_datetime,
+)
 
 
 def utc(time: dt.datetime) -> UtcDatetime:

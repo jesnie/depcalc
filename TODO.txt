@@ -3,6 +3,7 @@
 * Document everything.
 * Compute consistent lower bound?
 * Export stuff in __all__ in __init__.py
+* Add a __version__
 
 
 Alternatives:

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from compreq.io.re import TextReFile
+from compreq import TextReFile
 
 
 def test_text_re_file(tmp_path: Path) -> None:

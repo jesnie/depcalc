@@ -1,13 +1,7 @@
 import pytest
 from packaging.version import Version
 
-from compreq.levels import (
-    AnyLevel,
-    IntLevel,
-    Level,
-    RelativeToFirstNonZeroLevel,
-    get_level,
-)
+from compreq import AnyLevel, IntLevel, Level, RelativeToFirstNonZeroLevel, get_level
 
 
 @pytest.mark.parametrize(

@@ -5,33 +5,33 @@ from unittest.mock import MagicMock
 import pytest
 from packaging.version import Version
 
-import compreq.operators as o
-from compreq.contexts import PackageContext
-from compreq.lazy import (
+import compreq as cr
+from compreq import (
     AllLazyReleaseSet,
     LazyRequirement,
     LazySpecifierSet,
+    Level,
+    PackageContext,
     PreLazyReleaseSet,
     ProdLazyReleaseSet,
+    VersionToken,
     get_lazy_specifier,
     get_lazy_specifier_set,
     get_marker,
 )
-from compreq.levels import Level
-from compreq.versiontokens import VersionToken
 from tests.utils import fake_release, fake_release_set, utc
 
 
 def test_version() -> None:
-    assert isinstance(o.version, VersionToken)
-    assert isinstance(o.v, VersionToken)
+    assert isinstance(cr.version, VersionToken)
+    assert isinstance(cr.v, VersionToken)
 
 
 @pytest.mark.parametrize(
     "requirement,expected",
     [
         (
-            o.package("foo.bar"),
+            cr.package("foo.bar"),
             LazyRequirement(
                 package="foo.bar",
                 url=None,
@@ -41,7 +41,7 @@ def test_version() -> None:
             ),
         ),
         (
-            o.pkg("foo.bar"),
+            cr.pkg("foo.bar"),
             LazyRequirement(
                 package="foo.bar",
                 url=None,
@@ -51,7 +51,7 @@ def test_version() -> None:
             ),
         ),
         (
-            o.url("http://path/v1.2.3"),
+            cr.url("http://path/v1.2.3"),
             LazyRequirement(
                 package=None,
                 url="http://path/v1.2.3",
@@ -61,7 +61,7 @@ def test_version() -> None:
             ),
         ),
         (
-            o.extra("extra"),
+            cr.extra("extra"),
             LazyRequirement(
                 package=None,
                 url=None,
@@ -71,15 +71,15 @@ def test_version() -> None:
             ),
         ),
         (
-            o.specifier(">=1.2.3"),
+            cr.specifier(">=1.2.3"),
             get_lazy_specifier(">=1.2.3"),
         ),
         (
-            o.specifier_set(">=1.2.3,<2.0.0"),
+            cr.specifier_set(">=1.2.3,<2.0.0"),
             get_lazy_specifier_set(">=1.2.3,<2.0.0"),
         ),
         (
-            o.marker("python_version=='1.2.3'"),
+            cr.marker("python_version=='1.2.3'"),
             LazyRequirement(
                 package=None,
                 url=None,
@@ -95,18 +95,18 @@ def test_factories(requirement: LazyRequirement, expected: LazyRequirement) -> N
 
 
 def test_releases() -> None:
-    assert ProdLazyReleaseSet(AllLazyReleaseSet(None)) == o.releases()
-    assert ProdLazyReleaseSet(AllLazyReleaseSet("foo.bar")) == o.releases("foo.bar")
+    assert ProdLazyReleaseSet(AllLazyReleaseSet(None)) == cr.releases()
+    assert ProdLazyReleaseSet(AllLazyReleaseSet("foo.bar")) == cr.releases("foo.bar")
 
 
 def test_prereleases() -> None:
-    assert PreLazyReleaseSet(AllLazyReleaseSet(None)) == o.prereleases()
-    assert PreLazyReleaseSet(AllLazyReleaseSet("foo.bar")) == o.prereleases("foo.bar")
+    assert PreLazyReleaseSet(AllLazyReleaseSet(None)) == cr.prereleases()
+    assert PreLazyReleaseSet(AllLazyReleaseSet("foo.bar")) == cr.prereleases("foo.bar")
 
 
 def test_devreleases() -> None:
-    assert AllLazyReleaseSet(None) == o.devreleases()
-    assert AllLazyReleaseSet("foo.bar") == o.devreleases("foo.bar")
+    assert AllLazyReleaseSet(None) == cr.devreleases()
+    assert AllLazyReleaseSet("foo.bar") == cr.devreleases("foo.bar")
 
 
 @pytest.mark.parametrize(
@@ -123,7 +123,7 @@ def test_min_ver(releases: Collection[str], expected: str) -> None:
     release_set = fake_release_set(releases=releases, infer_successors=False)
     context = MagicMock(PackageContext)
     context.package = "foo.bar"
-    min_ver = o.min_ver(release_set)
+    min_ver = cr.min_ver(release_set)
     assert fake_release(version=expected) == min_ver.resolve(context)
     assert context.releases.called_once_with("foo.bar")
 
@@ -142,7 +142,7 @@ def test_max_ver(releases: Collection[str], expected: str) -> None:
     release_set = fake_release_set(releases=releases, infer_successors=False)
     context = MagicMock(PackageContext)
     context.package = "foo.bar"
-    max_ver = o.max_ver(release_set)
+    max_ver = cr.max_ver(release_set)
     assert fake_release(version=expected) == max_ver.resolve(context)
     assert context.releases.called_once_with("foo.bar")
 
@@ -157,7 +157,7 @@ def test_max_ver(releases: Collection[str], expected: str) -> None:
 )
 def test_minimum_ver(versions: Sequence[str], expected: str) -> None:
     context = MagicMock(PackageContext)
-    lazy = o.minimum_ver(*versions)
+    lazy = cr.minimum_ver(*versions)
     assert Version(expected) == lazy.resolve(context)
 
 
@@ -171,93 +171,93 @@ def test_minimum_ver(versions: Sequence[str], expected: str) -> None:
 )
 def test_maximum_ver(versions: Sequence[str], expected: str) -> None:
     context = MagicMock(PackageContext)
-    lazy = o.maximum_ver(*versions)
+    lazy = cr.maximum_ver(*versions)
     assert Version(expected) == lazy.resolve(context)
 
 
 @pytest.mark.parametrize(
     "level,version,keep_trailing_zeros,expected",
     [
-        (o.REL_MAJOR, "1.2.3a4dev5", True, "2.0.0"),
-        (o.MICRO, "1.2.3a4dev5", True, "1.2.4"),
-        (o.MINOR, "1.2.3a4dev5", True, "1.3.0"),
-        (o.MAJOR, "1.2.3a4dev5", True, "2.0.0"),
-        (o.REL_MAJOR, "0.1.0", True, "0.2.0"),
-        (o.MICRO, "0.1.0", True, "0.1.1"),
-        (o.MINOR, "0.1.0", True, "0.2.0"),
-        (o.MAJOR, "0.1.0", True, "1.0.0"),
-        (o.REL_MAJOR, "1!1.2.3a4dev5", True, "1!2.0.0"),
-        (o.MICRO, "1!1.2.3a4dev5", True, "1!1.2.4"),
-        (o.MINOR, "1!1.2.3a4dev5", True, "1!1.3.0"),
-        (o.MAJOR, "1!1.2.3a4dev5", True, "1!2.0.0"),
-        (o.REL_MAJOR, "1!0.1.0", True, "1!0.2.0"),
-        (o.MICRO, "1!0.1.0", True, "1!0.1.1"),
-        (o.MINOR, "1!0.1.0", True, "1!0.2.0"),
-        (o.MAJOR, "1!0.1.0", True, "1!1.0.0"),
-        (o.REL_MAJOR, "1.2.3a4dev5", False, "2"),
-        (o.MICRO, "1.2.3a4dev5", False, "1.2.4"),
-        (o.MINOR, "1.2.3a4dev5", False, "1.3"),
-        (o.MAJOR, "1.2.3a4dev5", False, "2"),
-        (o.REL_MAJOR, "0.1.0", False, "0.2"),
-        (o.MICRO, "0.1.0", False, "0.1.1"),
-        (o.MINOR, "0.1.0", False, "0.2"),
-        (o.MAJOR, "0.1.0", False, "1"),
-        (o.REL_MAJOR, "1!1.2.3a4dev5", False, "1!2"),
-        (o.MICRO, "1!1.2.3a4dev5", False, "1!1.2.4"),
-        (o.MINOR, "1!1.2.3a4dev5", False, "1!1.3"),
-        (o.MAJOR, "1!1.2.3a4dev5", False, "1!2"),
-        (o.REL_MAJOR, "1!0.1.0", False, "1!0.2"),
-        (o.MICRO, "1!0.1.0", False, "1!0.1.1"),
-        (o.MINOR, "1!0.1.0", False, "1!0.2"),
-        (o.MAJOR, "1!0.1.0", False, "1!1"),
+        (cr.REL_MAJOR, "1.2.3a4dev5", True, "2.0.0"),
+        (cr.MICRO, "1.2.3a4dev5", True, "1.2.4"),
+        (cr.MINOR, "1.2.3a4dev5", True, "1.3.0"),
+        (cr.MAJOR, "1.2.3a4dev5", True, "2.0.0"),
+        (cr.REL_MAJOR, "0.1.0", True, "0.2.0"),
+        (cr.MICRO, "0.1.0", True, "0.1.1"),
+        (cr.MINOR, "0.1.0", True, "0.2.0"),
+        (cr.MAJOR, "0.1.0", True, "1.0.0"),
+        (cr.REL_MAJOR, "1!1.2.3a4dev5", True, "1!2.0.0"),
+        (cr.MICRO, "1!1.2.3a4dev5", True, "1!1.2.4"),
+        (cr.MINOR, "1!1.2.3a4dev5", True, "1!1.3.0"),
+        (cr.MAJOR, "1!1.2.3a4dev5", True, "1!2.0.0"),
+        (cr.REL_MAJOR, "1!0.1.0", True, "1!0.2.0"),
+        (cr.MICRO, "1!0.1.0", True, "1!0.1.1"),
+        (cr.MINOR, "1!0.1.0", True, "1!0.2.0"),
+        (cr.MAJOR, "1!0.1.0", True, "1!1.0.0"),
+        (cr.REL_MAJOR, "1.2.3a4dev5", False, "2"),
+        (cr.MICRO, "1.2.3a4dev5", False, "1.2.4"),
+        (cr.MINOR, "1.2.3a4dev5", False, "1.3"),
+        (cr.MAJOR, "1.2.3a4dev5", False, "2"),
+        (cr.REL_MAJOR, "0.1.0", False, "0.2"),
+        (cr.MICRO, "0.1.0", False, "0.1.1"),
+        (cr.MINOR, "0.1.0", False, "0.2"),
+        (cr.MAJOR, "0.1.0", False, "1"),
+        (cr.REL_MAJOR, "1!1.2.3a4dev5", False, "1!2"),
+        (cr.MICRO, "1!1.2.3a4dev5", False, "1!1.2.4"),
+        (cr.MINOR, "1!1.2.3a4dev5", False, "1!1.3"),
+        (cr.MAJOR, "1!1.2.3a4dev5", False, "1!2"),
+        (cr.REL_MAJOR, "1!0.1.0", False, "1!0.2"),
+        (cr.MICRO, "1!0.1.0", False, "1!0.1.1"),
+        (cr.MINOR, "1!0.1.0", False, "1!0.2"),
+        (cr.MAJOR, "1!0.1.0", False, "1!1"),
     ],
 )
 def test_ceil_ver(level: Level, version: str, keep_trailing_zeros: bool, expected: str) -> None:
     context = MagicMock(PackageContext)
-    ceil_ver = o.ceil_ver(level, version, keep_trailing_zeros)
+    ceil_ver = cr.ceil_ver(level, version, keep_trailing_zeros)
     assert Version(expected) == ceil_ver.resolve(context)
 
 
 @pytest.mark.parametrize(
     "level,version,keep_trailing_zeros,expected",
     [
-        (o.REL_MAJOR, "1.2.3a4dev5", True, "1.0.0"),
-        (o.MICRO, "1.2.3a4dev5", True, "1.2.3"),
-        (o.MINOR, "1.2.3a4dev5", True, "1.2.0"),
-        (o.MAJOR, "1.2.3a4dev5", True, "1.0.0"),
-        (o.REL_MAJOR, "0.1.0", True, "0.1.0"),
-        (o.MICRO, "0.1.0", True, "0.1.0"),
-        (o.MINOR, "0.1.0", True, "0.1.0"),
-        (o.MAJOR, "0.1.0", True, "0.0.0"),
-        (o.REL_MAJOR, "1!1.2.3a4dev5", True, "1!1.0.0"),
-        (o.MICRO, "1!1.2.3a4dev5", True, "1!1.2.3"),
-        (o.MINOR, "1!1.2.3a4dev5", True, "1!1.2.0"),
-        (o.MAJOR, "1!1.2.3a4dev5", True, "1!1.0.0"),
-        (o.REL_MAJOR, "1!0.1.0", True, "1!0.1.0"),
-        (o.MICRO, "1!0.1.0", True, "1!0.1.0"),
-        (o.MINOR, "1!0.1.0", True, "1!0.1.0"),
-        (o.MAJOR, "1!0.1.0", True, "1!0.0.0"),
-        (o.REL_MAJOR, "1.2.3a4dev5", False, "1"),
-        (o.MICRO, "1.2.3a4dev5", False, "1.2.3"),
-        (o.MINOR, "1.2.3a4dev5", False, "1.2"),
-        (o.MAJOR, "1.2.3a4dev5", False, "1"),
-        (o.REL_MAJOR, "0.1.0", False, "0.1"),
-        (o.MICRO, "0.1.0", False, "0.1.0"),
-        (o.MINOR, "0.1.0", False, "0.1"),
-        (o.MAJOR, "0.1.0", False, "0"),
-        (o.REL_MAJOR, "1!1.2.3a4dev5", False, "1!1"),
-        (o.MICRO, "1!1.2.3a4dev5", False, "1!1.2.3"),
-        (o.MINOR, "1!1.2.3a4dev5", False, "1!1.2"),
-        (o.MAJOR, "1!1.2.3a4dev5", False, "1!1"),
-        (o.REL_MAJOR, "1!0.1.0", False, "1!0.1"),
-        (o.MICRO, "1!0.1.0", False, "1!0.1.0"),
-        (o.MINOR, "1!0.1.0", False, "1!0.1"),
-        (o.MAJOR, "1!0.1.0", False, "1!0"),
+        (cr.REL_MAJOR, "1.2.3a4dev5", True, "1.0.0"),
+        (cr.MICRO, "1.2.3a4dev5", True, "1.2.3"),
+        (cr.MINOR, "1.2.3a4dev5", True, "1.2.0"),
+        (cr.MAJOR, "1.2.3a4dev5", True, "1.0.0"),
+        (cr.REL_MAJOR, "0.1.0", True, "0.1.0"),
+        (cr.MICRO, "0.1.0", True, "0.1.0"),
+        (cr.MINOR, "0.1.0", True, "0.1.0"),
+        (cr.MAJOR, "0.1.0", True, "0.0.0"),
+        (cr.REL_MAJOR, "1!1.2.3a4dev5", True, "1!1.0.0"),
+        (cr.MICRO, "1!1.2.3a4dev5", True, "1!1.2.3"),
+        (cr.MINOR, "1!1.2.3a4dev5", True, "1!1.2.0"),
+        (cr.MAJOR, "1!1.2.3a4dev5", True, "1!1.0.0"),
+        (cr.REL_MAJOR, "1!0.1.0", True, "1!0.1.0"),
+        (cr.MICRO, "1!0.1.0", True, "1!0.1.0"),
+        (cr.MINOR, "1!0.1.0", True, "1!0.1.0"),
+        (cr.MAJOR, "1!0.1.0", True, "1!0.0.0"),
+        (cr.REL_MAJOR, "1.2.3a4dev5", False, "1"),
+        (cr.MICRO, "1.2.3a4dev5", False, "1.2.3"),
+        (cr.MINOR, "1.2.3a4dev5", False, "1.2"),
+        (cr.MAJOR, "1.2.3a4dev5", False, "1"),
+        (cr.REL_MAJOR, "0.1.0", False, "0.1"),
+        (cr.MICRO, "0.1.0", False, "0.1.0"),
+        (cr.MINOR, "0.1.0", False, "0.1"),
+        (cr.MAJOR, "0.1.0", False, "0"),
+        (cr.REL_MAJOR, "1!1.2.3a4dev5", False, "1!1"),
+        (cr.MICRO, "1!1.2.3a4dev5", False, "1!1.2.3"),
+        (cr.MINOR, "1!1.2.3a4dev5", False, "1!1.2"),
+        (cr.MAJOR, "1!1.2.3a4dev5", False, "1!1"),
+        (cr.REL_MAJOR, "1!0.1.0", False, "1!0.1"),
+        (cr.MICRO, "1!0.1.0", False, "1!0.1.0"),
+        (cr.MINOR, "1!0.1.0", False, "1!0.1"),
+        (cr.MAJOR, "1!0.1.0", False, "1!0"),
     ],
 )
 def test_floor_ver(level: Level, version: str, keep_trailing_zeros: bool, expected: str) -> None:
     context = MagicMock(PackageContext)
-    floor_ver = o.floor_ver(level, version, keep_trailing_zeros)
+    floor_ver = cr.floor_ver(level, version, keep_trailing_zeros)
     assert Version(expected) == floor_ver.resolve(context)
 
 
@@ -275,7 +275,7 @@ def test_min_age() -> None:
         infer_successors=False,
     )
 
-    min_age = o.min_age(
+    min_age = cr.min_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 5, 0)), minutes=3, allow_empty=True
     )
     assert fake_release_set(
@@ -304,7 +304,7 @@ def test_min_age__context_now() -> None:
         infer_successors=False,
     )
 
-    min_age = o.min_age(release_set, minutes=3, allow_empty=True)
+    min_age = cr.min_age(release_set, minutes=3, allow_empty=True)
     assert fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -328,7 +328,7 @@ def test_min_age__empty_allowed() -> None:
         ],
         infer_successors=False,
     )
-    min_age = o.min_age(
+    min_age = cr.min_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 5, 0)), minutes=6, allow_empty=True
     )
     assert fake_release_set(
@@ -350,7 +350,7 @@ def test_min_age__empty_not_allowed() -> None:
         ],
         infer_successors=False,
     )
-    min_age = o.min_age(
+    min_age = cr.min_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 5, 0)), minutes=6, allow_empty=False
     )
     assert fake_release_set(
@@ -374,7 +374,7 @@ def test_max_age() -> None:
         ],
         infer_successors=False,
     )
-    max_age = o.max_age(
+    max_age = cr.max_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 5, 0)), minutes=3, allow_empty=True
     )
     assert fake_release_set(
@@ -401,7 +401,7 @@ def test_max_age__context_now() -> None:
         ],
         infer_successors=False,
     )
-    max_age = o.max_age(release_set, minutes=3, allow_empty=True)
+    max_age = cr.max_age(release_set, minutes=3, allow_empty=True)
     assert fake_release_set(
         releases=[
             fake_release(version="1.0.2", released_time=dt.datetime(2023, 8, 16, 16, 2, 0)),
@@ -425,7 +425,7 @@ def test_max_age__empty_allowed() -> None:
         ],
         infer_successors=False,
     )
-    max_age = o.max_age(
+    max_age = cr.max_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 10, 0)), minutes=3, allow_empty=True
     )
     assert fake_release_set(
@@ -447,7 +447,7 @@ def test_max_age__empty_not_allowed() -> None:
         ],
         infer_successors=False,
     )
-    max_age = o.max_age(
+    max_age = cr.max_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 10, 0)), minutes=3, allow_empty=False
     )
     assert fake_release_set(
@@ -462,7 +462,7 @@ def test_max_age__empty_not_allowed() -> None:
     "level,n,releases,expected",
     [
         (
-            o.MAJOR,
+            cr.MAJOR,
             3,
             [
                 "1.0.0",
@@ -486,7 +486,7 @@ def test_max_age__empty_not_allowed() -> None:
             ],
         ),
         (
-            o.MINOR,
+            cr.MINOR,
             3,
             [
                 "1.0.0",
@@ -508,7 +508,7 @@ def test_max_age__empty_not_allowed() -> None:
             ],
         ),
         (
-            o.MICRO,
+            cr.MICRO,
             3,
             [
                 "1.0.0",
@@ -529,7 +529,7 @@ def test_max_age__empty_not_allowed() -> None:
             ],
         ),
         (
-            o.MINOR,
+            cr.MINOR,
             3,
             [
                 "2.2.0a1dev1",
@@ -548,6 +548,6 @@ def test_count(level: Level, n: int, releases: Collection[str], expected: Collec
     release_set = fake_release_set(releases=releases, infer_successors=False)
     context = MagicMock(PackageContext)
     context.package = "foo.bar"
-    count = o.count(level, n, release_set)
+    count = cr.count(level, n, release_set)
 
     assert fake_release_set(releases=expected, infer_successors=False) == count.resolve(context)

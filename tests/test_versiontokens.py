@@ -2,7 +2,7 @@ import pytest
 from packaging.version import Version
 
 import compreq.operators as o
-from compreq.lazy import EagerLazyVersion, LazySpecifier, SpecifierOperator
+from compreq import EagerLazyVersion, LazySpecifier, SpecifierOperator
 
 
 @pytest.mark.parametrize(

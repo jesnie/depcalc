@@ -3,10 +3,7 @@ from unittest.mock import MagicMock
 
 from packaging.requirements import Requirement
 
-from compreq.contexts import Context
-from compreq.io.text import TextRequirementsFile
-from compreq.lazy import get_lazy_requirement
-from compreq.roots import CompReq
+from compreq import CompReq, Context, TextRequirementsFile, get_lazy_requirement
 
 TEXT_REQUIREMENTS = """pack1!=1.2.5,<2.0.0,>=1.2.3
 pack2<=1.9.0,>1.2.3
