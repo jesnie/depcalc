@@ -11,6 +11,15 @@ from compreq.paths import AnyPath
 
 
 class PyprojectFile:
+    """
+    Wrapper around a generic `pyproject.toml`.
+
+    Usage::
+
+        with PyprojectFile.open() as pyproject:
+            pyproject.toml[...] = ...
+    """
+
     def __init__(self, path: AnyPath) -> None:
         self.path = Path(path)
         with open(self.path, "rt", encoding="utf-8") as fp:

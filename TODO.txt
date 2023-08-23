@@ -1,6 +1,5 @@
 * Faster Python release count?
 * Support tensorflow_probability -> Python version.
-* Document everything.
 * Compute consistent lower bound?
 
 

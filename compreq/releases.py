@@ -10,6 +10,8 @@ from compreq.time import UtcDatetime
 
 @dataclass(order=True, frozen=True)
 class Release:
+    """A specific release of a given package."""
+
     package: str
     version: Version
     released_time: UtcDatetime
@@ -18,6 +20,8 @@ class Release:
 
 @dataclass(frozen=True)
 class ReleaseSet:
+    """A set of releases of the same package."""
+
     package: str
     releases: AbstractSet[Release]
 
@@ -28,6 +32,8 @@ class ReleaseSet:
 
 
 def infer_successor(versions: Collection[Version]) -> dict[Version, Version | None]:
+    """Given a collection of `Version`s, compute their successors."""
+
     next_main: Version | None = None
     next_pre: Version | None = None
     next_dev: Version | None = None
@@ -46,6 +52,8 @@ def infer_successor(versions: Collection[Version]) -> dict[Version, Version | No
 
 
 def infer_and_set_successor(releases: ReleaseSet) -> ReleaseSet:
+    """Compute and set the `successor` fields on a set of releases."""
+
     by_version = {r.version: r for r in releases.releases}
     successors = infer_successor(by_version)
     for r in sorted(releases.releases, reverse=True):

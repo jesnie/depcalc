@@ -10,17 +10,42 @@ from compreq.levels import IntLevel
 
 @dataclass(order=True, frozen=True)
 class Bounds:
+    """
+    Bounds of versions, extracted from a `SpecfierSet`.
+    """
+
     specifier_set: SpecifierSet
+    """The source `SpecifierSet`."""
+
     upper: Version | None
+    """Upper bound on versions. `None` if there is no upper bound."""
+
     upper_inclusive: bool
+    """Whether the upper bound is inclusive."""
+
     lower: Version | None
+    """Lower bound on versions. `None` if there is no lower bound."""
+
     lower_inclusive: bool
+    """Whether the lower bound is inclusive."""
+
     exclusions: AbstractSet[Version]
+    """Set of specific versions that are disallowed."""
 
     def minimal_specifier_set(self, exclusions: bool = True) -> SpecifierSet:
+        """
+        Create a new (minimal) specifier set from these bounds.
+
+        :param exclusions: Whether to excluded specific versions.
+        """
         return self.upper_specifier_set(False) & self.lower_specifier_set(exclusions)
 
     def upper_specifier_set(self, exclusions: bool = True) -> SpecifierSet:
+        """
+        Create a new specifier set from the upper bounds.
+
+        :param exclusions: Whether to excluded specific versions.
+        """
         result = SpecifierSet()
         if self.upper is not None:
             if self.upper_inclusive:
@@ -32,6 +57,11 @@ class Bounds:
         return result
 
     def lower_specifier_set(self, exclusions: bool = True) -> SpecifierSet:
+        """
+        Create a new specifier set from the lower bounds.
+
+        :param exclusions: Whether to excluded specific versions.
+        """
         result = SpecifierSet()
         if self.lower is not None:
             if self.lower_inclusive:
@@ -43,10 +73,17 @@ class Bounds:
         return result
 
     def exclusions_specifier_set(self) -> SpecifierSet:
+        """
+        Create a new specifier set, only excluding specific versions.
+        """
         return SpecifierSet(",".join(f"!={str(v)}" for v in self.exclusions))
 
 
 def get_bounds(specifier_set: SpecifierSet) -> Bounds:
+    """
+    Extracts bounds from a `SpecifierSet`.
+    """
+
     upper: Version | None = None
     upper_inclusive: bool = False
     lower: Version | None = None

@@ -11,37 +11,43 @@ from compreq.time import UtcDatetime, is_utc_datetime, utc_now
 
 
 class PackageContext(ABC):
+    """
+    A context for resolving values related to a given package.
+    """
+
     @property
     @abstractmethod
     def package(self) -> str:
-        ...
+        """The package values should be resolved relative to."""
 
     @property
     @abstractmethod
     def now(self) -> UtcDatetime:
-        ...
+        """The "current" time."""
 
     @abstractmethod
     def releases(self, package: str) -> ReleaseSet:
-        ...
+        """Fetch all releases of `package`."""
 
 
 class Context(ABC):
     @property
     @abstractmethod
     def now(self) -> UtcDatetime:
-        ...
+        """The "current" time."""
 
     @abstractmethod
     def for_package(self, package: str) -> PackageContext:
-        ...
+        """Create a new context for the given package."""
 
     @abstractmethod
     def releases(self, package: str) -> ReleaseSet:
-        ...
+        """Fetch all releases of `package`."""
 
 
 class DefaultPackageContext(PackageContext):
+    """Default implementation of `PackageContext`."""
+
     def __init__(self, parent: Context, package: str) -> None:
         self._parent = parent
         self._package = package
@@ -59,6 +65,8 @@ class DefaultPackageContext(PackageContext):
 
 
 class DefaultContext(Context):
+    """Default implementation of `Context`."""
+
     def __init__(
         self, python_specifier: SpecifierSet | str, now: UtcDatetime | None = None
     ) -> None:

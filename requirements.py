@@ -42,11 +42,10 @@ def set_python_version(
 
 def main() -> None:
     with cr.PoetryPyprojectFile.open() as pyproject:
-        prev_python_specifiers = cr.get_bounds(
+        prev_python_specifier = cr.get_bounds(
             pyproject.get_requirements()["python"].specifier
         ).lower_specifier_set()
-        ctx = cr.DefaultContext(prev_python_specifiers)
-        comp_req = cr.CompReq(ctx)
+        comp_req = cr.CompReq(python_specifier=prev_python_specifier)
 
         python_specifiers = set_python_version(comp_req, pyproject)
 
