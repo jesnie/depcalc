@@ -11,6 +11,7 @@ from compreq.time import is_utc_datetime
 
 @cache
 def get_pypi_releases(package: str) -> ReleaseSet:
+    """Get all releases of the given package, from PyPi."""
     url = f"https://pypi.org/pypi/{package}/json"
     data = requests.get(url, timeout=600.0).json()
     result = set()

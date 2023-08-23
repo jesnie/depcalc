@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, replace
 from enum import Enum
 from itertools import chain
-from typing import AbstractSet, TypeAlias, Union, overload
+from typing import AbstractSet, Final, TypeAlias, Union, overload
 
 from packaging.markers import Marker
 from packaging.requirements import Requirement
@@ -16,15 +16,29 @@ from compreq.releases import Release, ReleaseSet
 
 
 class LazyRelease(ABC):
+    """Strategy for computing a `Release` in the context of a package."""
+
     @abstractmethod
     def resolve(self, context: PackageContext) -> Release:
-        ...
+        """Compute the `Release`."""
+
+
+@dataclass(order=True, frozen=True)
+class EagerLazyRelease(LazyRelease):
+    """`LazyRelease` that returns a given constant value."""
+
+    release: Release
+
+    def resolve(self, context: PackageContext) -> Release:
+        return self.release
 
 
 AnyRelease: TypeAlias = Release | LazyRelease
+"""Type alias for anything that can be converted to a `LazyRelease`."""
 
 
 def get_lazy_release(release: AnyRelease) -> LazyRelease:
+    """Get a `LazyRelease` for the given release-like value."""
     if isinstance(release, Release):
         release = EagerLazyRelease(release)
     if isinstance(release, LazyRelease):
@@ -32,22 +46,18 @@ def get_lazy_release(release: AnyRelease) -> LazyRelease:
     raise AssertionError(f"Unknown type of release: {type(release)}")
 
 
-@dataclass(order=True, frozen=True)
-class EagerLazyRelease(LazyRelease):
-    release: Release
-
-    def resolve(self, context: PackageContext) -> Release:
-        return self.release
-
-
 class LazyReleaseSet(ABC):
+    """Strategy for computing a `ReleaseSet` in the context of a package."""
+
     @abstractmethod
     def resolve(self, context: PackageContext) -> ReleaseSet:
-        ...
+        """Compute the `ReleaseSet`."""
 
 
 @dataclass(order=True, frozen=True)
 class EagerLazyReleaseSet(LazyReleaseSet):
+    """`LazyReleaseSet` that returns a given constant set of (lazy) releases."""
+
     releases: AbstractSet[LazyRelease]
 
     def resolve(self, context: PackageContext) -> ReleaseSet:
@@ -59,7 +69,12 @@ class EagerLazyReleaseSet(LazyReleaseSet):
 
 @dataclass(order=True, frozen=True)
 class AllLazyReleaseSet(LazyReleaseSet):
+    """`LazyReleaseSet` that returns all releases of a given package."""
+
     package: str | None
+    """
+    The package to get releases from. If `None`, the package of the context is used.
+    """
 
     def resolve(self, context: PackageContext) -> ReleaseSet:
         package = self.package or context.package
@@ -68,6 +83,11 @@ class AllLazyReleaseSet(LazyReleaseSet):
 
 @dataclass(order=True, frozen=True)
 class ProdLazyReleaseSet(LazyReleaseSet):
+    """
+    `LazyReleaseSet` that filters another `LazyReleaseSet` and only returns the "production"
+    releases.
+    """
+
     source: LazyReleaseSet
 
     def resolve(self, context: PackageContext) -> ReleaseSet:
@@ -84,6 +104,11 @@ class ProdLazyReleaseSet(LazyReleaseSet):
 
 @dataclass(order=True, frozen=True)
 class PreLazyReleaseSet(LazyReleaseSet):
+    """
+    `LazyReleaseSet` that filters another `LazyReleaseSet` and only returns the "production"
+    and "pre-release" releases. (Not development releases.)
+    """
+
     source: LazyReleaseSet
 
     def resolve(self, context: PackageContext) -> ReleaseSet:
@@ -96,6 +121,10 @@ class PreLazyReleaseSet(LazyReleaseSet):
 
 @dataclass(order=True, frozen=True)
 class SpecifierLazyReleaseSet(LazyReleaseSet):
+    """
+    `LazyReleaseSet` that filters another `LazyReleaseSet` based on specifiers.
+    """
+
     source: LazyReleaseSet
     specifier_set: LazySpecifierSet
 
@@ -122,9 +151,11 @@ AnyReleaseSet: TypeAlias = Union[
     ReleaseSet,
     LazyReleaseSet,
 ]
+"""Type alias for anything that can be converted to a `LazyReleaseSet`."""
 
 
 def get_lazy_release_set(release_set: AnyReleaseSet | None) -> LazyReleaseSet:
+    """Get a `LazyRelease` for the given release-set-like value."""
     if release_set is None:
         release_set = ProdLazyReleaseSet(AllLazyReleaseSet(None))
     if isinstance(release_set, str):
@@ -154,13 +185,17 @@ def get_lazy_release_set(release_set: AnyReleaseSet | None) -> LazyReleaseSet:
 
 
 class LazyVersion(ABC):
+    """Strategy for computing a `Version` in the context of a package."""
+
     @abstractmethod
     def resolve(self, context: PackageContext) -> Version:
-        ...
+        """Compute the `Version`."""
 
 
 @dataclass(order=True, frozen=True)
 class EagerLazyVersion(LazyVersion):
+    """`LazyVersion` that returns a given constant value."""
+
     version: Version
 
     def resolve(self, context: PackageContext) -> Version:
@@ -169,6 +204,8 @@ class EagerLazyVersion(LazyVersion):
 
 @dataclass(order=True, frozen=True)
 class ReleaseLazyVersion(LazyVersion):
+    """`LazyVersion` that gets the version from a `LazyRelease`."""
+
     release: LazyRelease
 
     def resolve(self, context: PackageContext) -> Version:
@@ -176,9 +213,11 @@ class ReleaseLazyVersion(LazyVersion):
 
 
 AnyVersion: TypeAlias = str | Release | LazyRelease | Version | LazyVersion
+"""Type alias for anything that can be converted to a `LazyVersion`."""
 
 
 def get_lazy_version(version: AnyVersion) -> LazyVersion:
+    """Get a `LazyVersion` for the given version-like value."""
     if isinstance(version, str):
         version = Version(version)
     if isinstance(version, Release):
@@ -193,6 +232,8 @@ def get_lazy_version(version: AnyVersion) -> LazyVersion:
 
 
 class SpecifierOperator(Enum):
+    """Enumeration of operators for specifiers."""
+
     COMPATIBLE = "~="
     NE = "!="
     EQ = "=="
@@ -216,9 +257,11 @@ class SpecifierOperator(Enum):
 
 
 AnySpecifierOperator: TypeAlias = str | SpecifierOperator
+"""Type alias for anything that can be converted to a `SpecifierOperator`."""
 
 
 def get_specifier_operator(op: AnySpecifierOperator) -> SpecifierOperator:
+    """Get a `SpecifierOperator` for the given operator-like value."""
     if isinstance(op, str):
         return SpecifierOperator(op)
     if isinstance(op, SpecifierOperator):
@@ -228,10 +271,20 @@ def get_specifier_operator(op: AnySpecifierOperator) -> SpecifierOperator:
 
 @dataclass(order=True, frozen=True)
 class LazySpecifier:
+    """
+    Strategy for computing a `Specifier` in the context of a package.
+
+    Lazy specifiers can be combined with other specifiers; specifier-sets; and requiremnts using the
+    `&` operator::
+
+        lazy_specifier_set = lazy_specifier_1 & lazy_specifier_2
+    """
+
     op: SpecifierOperator
     version: LazyVersion
 
     def resolve(self, context: PackageContext) -> Specifier:
+        """Compute the `Specifier`."""
         op = self.op
         version = self.version.resolve(context)
         return Specifier(f"{op.value}{version}")
@@ -260,9 +313,11 @@ class LazySpecifier:
 
 
 AnySpecifier: TypeAlias = str | Specifier | LazySpecifier
+"""Type alias for anything that can be converted to a `LazySpecifier`."""
 
 
 def get_lazy_specifier(specifier: AnySpecifier) -> LazySpecifier:
+    """Get a `LazySpecifier` for the given specifier-like value."""
     if isinstance(specifier, str):
         specifier = Specifier(specifier)
     if isinstance(specifier, Specifier):
@@ -276,9 +331,20 @@ def get_lazy_specifier(specifier: AnySpecifier) -> LazySpecifier:
 
 @dataclass(frozen=True)
 class LazySpecifierSet:
+    """
+    Strategy for computing a `SpecifierSet` in the context of a package.
+
+    Lazy specifier-sets can be combined with specifiers; other specifier-sets; and requiremnts using
+    the `&` operator::
+
+        lazy_specifier_set = lazy_specifier_set_1 & lazy_specifier_set_2
+
+    """
+
     specifiers: AbstractSet[LazySpecifier]
 
     def resolve(self, context: PackageContext) -> SpecifierSet:
+        """Compute the `SpecifierSet`."""
         specifiers = [s.resolve(context) for s in self.specifiers]
         return SpecifierSet(",".join(str(s) for s in specifiers))
 
@@ -306,9 +372,11 @@ class LazySpecifierSet:
 
 
 AnySpecifierSet: TypeAlias = str | Specifier | LazySpecifier | SpecifierSet | LazySpecifierSet
+"""Type alias for anything that can be converted to a `LazySpecifierSet`."""
 
 
 def get_lazy_specifier_set(specifier_set: AnySpecifierSet) -> LazySpecifierSet:
+    """Get a `LazySpecifierSet` for the given specifier-set-like value."""
     if isinstance(specifier_set, str):
         specifier_set = SpecifierSet(specifier_set)
     if isinstance(specifier_set, Specifier):
@@ -323,9 +391,11 @@ def get_lazy_specifier_set(specifier_set: AnySpecifierSet) -> LazySpecifierSet:
 
 
 AnyMarker: TypeAlias = str | Marker
+"""Type alias for anything that can be converted to a `Marker`."""
 
 
 def get_marker(marker: AnyMarker) -> Marker:
+    """Get a `Marker` for the given marker-like value."""
     if isinstance(marker, str):
         marker = Marker(marker)
     if isinstance(marker, Marker):
@@ -335,11 +405,46 @@ def get_marker(marker: AnyMarker) -> Marker:
 
 @dataclass(order=True, frozen=True)
 class LazyRequirement:
+    """
+    Strategy for computing a `Release` in a context.
+
+    A `LazyRequirement` can be in a partially configured state. To be valid a `LazyRequirement`
+    must:
+
+    * Have a `package` configured.
+    * Cannot have both a `url` and a `specifier`.
+
+    Lazy requiremnts can be combined with specifiers; specifier-sets; and other requiremnts using
+    the `&` operator::
+
+        lazy_requirement = lazy_requirement_1 & lazy_requirement_2
+    """
+
     package: str | None
+    """The required package. Required."""
+
     url: str | None
+    """
+    The url to download the package at. Use:
+
+    * file:///... to refer to local files.
+    * git+https://... to refer to git repositories.
+
+    Mutually exclusive with `specifier`.
+    """
+
     extras: AbstractSet[str]
+    """Set of extras to install."""
+
     specifier: LazySpecifierSet
+    """
+    Specification of which versions of the package are valid.
+
+    Mutually exclusize with `url`.
+    """
+
     marker: Marker | None
+    """Marker for specifying when this requirement should be used."""
 
     def __post_init__(self) -> None:
         assert (self.url is None) or not self.specifier.specifiers, (
@@ -357,6 +462,7 @@ class LazyRequirement:
         assert self.package, f"A requirement must have the package name set. Found: {self.package}."
 
     def resolve(self, context: Context) -> Requirement:
+        """Compute the `Requirement`."""
         self.assert_valid()
         assert self.package
 
@@ -382,13 +488,23 @@ class LazyRequirement:
         return Requirement("".join(tokens))
 
 
-EMPTY_REQUIREMENT = LazyRequirement(
+EMPTY_REQUIREMENT: Final[LazyRequirement] = LazyRequirement(
     package=None,
     url=None,
     extras=set(),
     specifier=LazySpecifierSet(set()),
     marker=None,
 )
+"""
+A `LazyRequirement` without any values set.
+
+Useful for constructing partial requirements::
+
+    from dataclasses import replace
+
+    replace(EMPTY_REQUIREMENT, package="foo.bar")
+
+"""
 
 
 AnyRequirement: TypeAlias = (
@@ -400,9 +516,11 @@ AnyRequirement: TypeAlias = (
     | Requirement
     | LazyRequirement
 )
+"""Type alias for anything that can be converted to a `LazyRequirement`."""
 
 
 def get_lazy_requirement(requirement: AnyRequirement) -> LazyRequirement:
+    """Get a `LazyRequirement` for the given requirement-like value."""
     if isinstance(requirement, str):
         requirement = Requirement(requirement)
     if isinstance(requirement, (Specifier, LazySpecifier, SpecifierSet)):
@@ -438,6 +556,14 @@ def compose(lhs: Requirement | LazyRequirement, rhs: AnyRequirement) -> LazyRequ
 
 
 def compose(lhs: AnyRequirement, rhs: AnyRequirement) -> LazySpecifierSet | LazyRequirement:
+    """
+    Combine two specifier-, specifier-set- or requirement-like values into a `LazySpecifierSet` or
+    `LazyRequirement`.
+
+    If either of the arguments are a requirement, the result is `LazyRequirement`. If neither
+    argument is a requirement the result is a `LazySpecifierSet`.
+
+    """
     if isinstance(lhs, (Requirement, LazyRequirement)) or isinstance(
         rhs, (Requirement, LazyRequirement)
     ):

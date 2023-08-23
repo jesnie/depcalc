@@ -15,7 +15,19 @@ from compreq.roots import CompReq
 
 
 class PoetryPyprojectFile(PyprojectFile):
+    """
+    Wrapper around a `pyproject.toml` using Poetry.
+
+    Usage::
+
+        with PoetryPyprojectFile.open() as pyproject:
+            pyproject.set_requirements(...)
+    """
+
     def get_requirements(self, group: str | None = None) -> Mapping[str, Requirement]:
+        """
+        Get the given `group` of requirements. If `group` is `None` the main group is returned.
+        """
         return {
             package: self._parse_requirement(package, toml)
             for package, toml in self._get_dependencies(group).items()
@@ -66,6 +78,9 @@ class PoetryPyprojectFile(PyprojectFile):
         requirements: Mapping[str, AnyRequirement] | Collection[AnyRequirement],
         group: str | None = None,
     ) -> None:
+        """
+        Set the given `group` of requirements. If `group` is `None` the main group is set.
+        """
         requirements_collection = (
             requirements.values() if hasattr(requirements, "values") else requirements
         )
@@ -114,13 +129,19 @@ class PoetryPyprojectFile(PyprojectFile):
             return self._get_poetry()["group"][group]["dependencies"]
 
     def get_classifiers(self) -> Sequence[str]:
+        """Get the package classifiers. (https://pypi.org/classifiers/)"""
         return list(self._get_poetry()["classifiers"])
 
     def set_classifiers(self, classifiers: Sequence[str]) -> None:
+        """Set the package classifiers. (https://pypi.org/classifiers/)"""
         toml = self._get_poetry()["classifiers"]
         toml.clear()
         toml.extend(classifiers)
         toml.multiline(True)
 
     def set_python_classifiers(self, cr: CompReq, python_releases: AnyReleaseSet) -> None:
+        """
+        Replace python package classifiers (https://pypi.org/classifiers/) with those corresponding
+        to `python_releases`.
+        """
         self.set_classifiers(set_python_classifiers(cr, python_releases, self.get_classifiers()))

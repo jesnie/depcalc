@@ -11,6 +11,15 @@ from compreq.paths import AnyPath
 
 
 class TextReFile:
+    """
+    Wrapper around a generic text file.
+
+    Usage::
+
+        with TextReFile.open("test_and_release.yaml") as actions:
+            actions.sub(..., ...)
+    """
+
     def __init__(self, path: AnyPath) -> None:
         self.path = Path(path)
         self.contents = ""
@@ -34,6 +43,11 @@ class TextReFile:
         count: int = 0,
         flags: int = re.MULTILINE,
     ) -> int:
+        """
+        Regular expression substitute all occurences of `pattern` with `repl` in this file.
+
+        See the python documentation on `re.sub` for more details.
+        """
         self.contents, result = re.subn(pattern, repl, self.contents, count, flags)
         return result
 

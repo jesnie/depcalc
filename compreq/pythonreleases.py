@@ -13,6 +13,14 @@ VERSION_TGZ_RE = re.compile(r"Python-(" + VERSION_PATTERN + r").tgz", re.VERBOSE
 
 @cache
 def get_python_releases(python_specifiers: SpecifierSet) -> ReleaseSet:
+    """
+    Get all releases of Python.
+
+    The `python_specifiers` argument is used to pre-filter the Python versions to fetch. This
+    function can be a bit slow, and setting a tight pre-filter can significantly speed it up. If you
+    *really* want to fetch *all* Python releases use `get_python_releases(SpecifierSet())`.
+    """
+
     assert not any(
         Version(s.version).is_prerelease or Version(s.version).is_devrelease
         for s in python_specifiers

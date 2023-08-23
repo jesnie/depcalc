@@ -23,6 +23,8 @@ from compreq.releases import Release, ReleaseSet
 
 
 class CompReq:
+    """Factory for resolving lazy objects."""
+
     @overload
     def __init__(self, context: None = None, *, python_specifier: None = None) -> NoReturn:
         ...
@@ -42,6 +44,13 @@ class CompReq:
     def __init__(
         self, context: Context | None = None, *, python_specifier: SpecifierSet | str | None = None
     ) -> None:
+        """
+        :param context: Context to use. If `None` a default is created. You must set `context` xor
+            `python_specifier`.
+        :param python_specifier: Pre-filter of which python versions to consider. Setting a tight
+            filter can significantly speed up retrieval of Python versions. You must set `context`
+            xor `python_specifier`.
+        """
         assert (context is None) != (python_specifier is None), (
             "Must set exactly one of `context` and `python_specifier`."
             f" Found: {context=}, {python_specifier=}"

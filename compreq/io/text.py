@@ -13,6 +13,15 @@ from compreq.roots import CompReq
 
 
 class TextRequirementsFile:
+    """
+    Wrapper around a `requirements.txt` file.
+
+    Usage::
+
+        with TextRequirementsFile.open("requirements.txt") as requirements_file:
+            requirements_file.set_requirements(...)
+    """
+
     def __init__(self, path: AnyPath) -> None:
         self.path = Path(path)
         self.requirements = {}
