@@ -89,7 +89,7 @@ def extra(value: str) -> LazyRequirement:
 
         pkg("compreq") & extra("torch") & extra("tensorflow")
     """
-    return replace(EMPTY_REQUIREMENT, extras={value})
+    return replace(EMPTY_REQUIREMENT, extras=frozenset([value]))
 
 
 def specifier(value: AnySpecifier) -> LazySpecifier:
@@ -169,7 +169,7 @@ class MinLazyRelease(LazyRelease):
 
     def resolve(self, context: PackageContext) -> Release:
         release_set = self.release_set.resolve(context)
-        return min(release_set.releases)
+        return min(release_set)
 
 
 def min_ver(release_set: AnyReleaseSet | None = None) -> LazyRelease:
@@ -196,7 +196,7 @@ class MaxLazyRelease(LazyRelease):
 
     def resolve(self, context: PackageContext) -> Release:
         release_set = self.release_set.resolve(context)
-        return max(release_set.releases)
+        return max(release_set)
 
 
 def max_ver(release_set: AnyReleaseSet | None = None) -> LazyRelease:
@@ -392,9 +392,9 @@ class MinAgeLazyReleaseSet(LazyReleaseSet):
         now = self.now or context.now
         max_time = now - self.min_age
 
-        result = {r for r in release_set.releases if r.released_time <= max_time}
+        result = frozenset(r for r in release_set if r.released_time <= max_time)
         if not (self.allow_empty or result):
-            result = {min(release_set.releases)}
+            result = frozenset({min(release_set)})
         return ReleaseSet(package=release_set.package, releases=result)
 
 
@@ -453,9 +453,9 @@ class MaxAgeLazyReleaseSet(LazyReleaseSet):
         now = self.now or context.now
         min_time = now - self.max_age
 
-        result = {r for r in release_set.releases if r.released_time >= min_time}
+        result = frozenset(r for r in release_set if r.released_time >= min_time)
         if not (self.allow_empty or result):
-            result = {max(release_set.releases)}
+            result = frozenset({max(release_set)})
         return ReleaseSet(package=release_set.package, releases=result)
 
 
@@ -509,13 +509,13 @@ class CountLazyReleaseSet(LazyReleaseSet):
 
     def resolve(self, context: PackageContext) -> ReleaseSet:
         release_set = self.release_set.resolve(context)
-        fixed_level = IntLevel(self.level.index(max(release_set.releases).version))
+        fixed_level = IntLevel(self.level.index(max(release_set).version))
         unique_versions_at_level = {
             FloorLazyVersion.floor(fixed_level, r.version, keep_trailing_zeros=False)
-            for r in release_set.releases
+            for r in release_set
         }
         min_version = sorted(unique_versions_at_level, reverse=True)[: self.n][-1]
-        result = {r for r in release_set.releases if r.version >= min_version}
+        result = frozenset(r for r in release_set if r.version >= min_version)
         return ReleaseSet(package=release_set.package, releases=result)
 
 

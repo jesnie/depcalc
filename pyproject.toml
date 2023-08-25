@@ -87,6 +87,7 @@ disable = [
   "too-many-statements",
   "unhashable-member",
   "unused-argument",
+  "use-implicit-booleaness-not-comparison",
 ]
 
 [tool.taskipy.tasks]

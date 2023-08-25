@@ -18,7 +18,7 @@ def get_python_classifiers(cr: CompReq, python_releases: AnyReleaseSet) -> list[
         version_strs_set.add(s)
         version_strs_list.append(s)
 
-    for release in sorted(cr.resolve_release_set("python", python_releases).releases):
+    for release in sorted(cr.resolve_release_set("python", python_releases)):
         v = release.version
         add_version_str(f"{v.major}")
         add_version_str(f"{v.major}.{v.minor}")

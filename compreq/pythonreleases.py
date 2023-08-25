@@ -54,4 +54,4 @@ def get_python_releases(python_specifiers: SpecifierSet) -> ReleaseSet:
                 )
             )
 
-    return infer_and_set_successor(ReleaseSet("python", result))
+    return infer_and_set_successor(ReleaseSet("python", frozenset(result)))

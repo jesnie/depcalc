@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Collection, Iterator, Mapping
+from typing import Iterator
 
 from packaging.requirements import Requirement
 from typing_extensions import Self
 
-from compreq.lazy import AnyRequirement
+from compreq.lazy import AnyRequirementSet
 from compreq.paths import AnyPath
+from compreq.requirements import RequirementSet
 from compreq.roots import CompReq
 
 
@@ -24,7 +25,7 @@ class TextRequirementsFile:
 
     def __init__(self, path: AnyPath) -> None:
         self.path = Path(path)
-        self.requirements = {}
+        requirements = []
         if self.path.exists():
             with open(self.path, "rt", encoding="utf-8") as fp:
                 for line in fp.readlines():
@@ -33,8 +34,8 @@ class TextRequirementsFile:
                         continue
                     if line.startswith("#"):
                         continue
-                    r = Requirement(line)
-                    self.requirements[r.name] = r
+                    requirements.append(Requirement(line))
+        self.requirements = RequirementSet.new(requirements)
 
     def close(self) -> None:
         self.path.write_text(str(self), encoding="utf-8")
@@ -46,19 +47,15 @@ class TextRequirementsFile:
         yield f
         f.close()
 
-    def get_requirements(self) -> Mapping[str, Requirement]:
-        return dict(self.requirements)
+    def get_requirements(self) -> RequirementSet:
+        return self.requirements
 
     def set_requirements(
         self,
         cr: CompReq,
-        requirements: Mapping[str, AnyRequirement] | Collection[AnyRequirement],
+        requirement_set: AnyRequirementSet,
     ) -> None:
-        requirements_collection = (
-            requirements.values() if hasattr(requirements, "values") else requirements
-        )
-        resolved_requirements = [cr.resolve_requirement(r) for r in requirements_collection]
-        self.requirements = {r.name: r for r in resolved_requirements}
+        self.requirements = cr.resolve_requirement_set(requirement_set)
 
     def __str__(self) -> str:
-        return "\n".join(str(r) for _, r in sorted(self.requirements.items())) + "\n"
+        return "\n".join(str(r) for r in self.requirements.values()) + "\n"

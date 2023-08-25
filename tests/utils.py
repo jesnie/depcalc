@@ -47,7 +47,7 @@ def fake_release_set(
             r = fake_release(package=package, version=r)
         assert isinstance(r, Release)
         releases_set.add(r)
-    release_set = ReleaseSet(package, releases_set)
+    release_set = ReleaseSet(package, frozenset(releases_set))
     if infer_successors:
         release_set = infer_and_set_successor(release_set)
     return release_set
@@ -60,7 +60,7 @@ def assert_release_set(
 ) -> None:
     actual_releases: set[tuple[str, UtcDatetime, str | None]] = set()
     assert expected_package == actual.package
-    for r in actual.releases:
+    for r in actual:
         assert expected_package == r.package
         successor_version = str(r.successor.version) if r.successor else None
         actual_releases.add((str(r.version), r.released_time, successor_version))

@@ -14,6 +14,7 @@ from compreq import (
     AnyRelease,
     AnyReleaseSet,
     AnyRequirement,
+    AnyRequirementSet,
     AnySpecifier,
     AnySpecifierOperator,
     AnySpecifierSet,
@@ -25,6 +26,7 @@ from compreq import (
     LazyRelease,
     LazyReleaseSet,
     LazyRequirement,
+    LazyRequirementSet,
     LazySpecifier,
     LazySpecifierSet,
     LazyVersion,
@@ -33,11 +35,13 @@ from compreq import (
     ProdLazyReleaseSet,
     ReleaseLazyVersion,
     ReleaseSet,
+    RequirementSet,
     SpecifierLazyReleaseSet,
     SpecifierOperator,
     get_lazy_release,
     get_lazy_release_set,
     get_lazy_requirement,
+    get_lazy_requirement_set,
     get_lazy_specifier,
     get_lazy_specifier_set,
     get_lazy_version,
@@ -73,22 +77,24 @@ def test_get_lazy_release(release: AnyRelease, expected: LazyRelease) -> None:
 
 
 def test_eager_lazy_release_set__empty() -> None:
-    lazy = EagerLazyReleaseSet(set())
+    lazy = EagerLazyReleaseSet(frozenset())
     context = MagicMock(PackageContext)
     context.package = "foo.bar"
 
-    assert ReleaseSet("foo.bar", set()) == lazy.resolve(context)
+    assert ReleaseSet("foo.bar", frozenset()) == lazy.resolve(context)
 
 
 def test_eager_lazy_release_set() -> None:
     release_2 = fake_release(version="1.2.0")
     release_1 = fake_release(version="1.1.0", successor=release_2)
 
-    lazy = EagerLazyReleaseSet({get_lazy_release(release_1), get_lazy_release(release_2)})
+    lazy = EagerLazyReleaseSet(
+        frozenset([get_lazy_release(release_1), get_lazy_release(release_2)])
+    )
     context = MagicMock(PackageContext)
     context.package = "foo.bar"
 
-    assert ReleaseSet("foo.bar", {release_1, release_2}) == lazy.resolve(context)
+    assert ReleaseSet("foo.bar", frozenset([release_1, release_2])) == lazy.resolve(context)
 
 
 def test_all_lazy_release_set() -> None:
@@ -186,47 +192,55 @@ def test_specifier_lazy_release_set() -> None:
         ),
         (
             fake_release(version="1.1.0"),
-            EagerLazyReleaseSet({EagerLazyRelease(fake_release(version="1.1.0"))}),
+            EagerLazyReleaseSet(frozenset([EagerLazyRelease(fake_release(version="1.1.0"))])),
         ),
         (
             EagerLazyRelease(fake_release(version="1.2.0")),
-            EagerLazyReleaseSet({EagerLazyRelease(fake_release(version="1.2.0"))}),
+            EagerLazyReleaseSet(frozenset([EagerLazyRelease(fake_release(version="1.2.0"))])),
         ),
         (
-            ReleaseSet("foo.bar", set()),
-            EagerLazyReleaseSet(set()),
+            ReleaseSet("foo.bar", frozenset()),
+            EagerLazyReleaseSet(frozenset()),
         ),
         (
             ReleaseSet(
                 "foo.bar",
-                {
-                    fake_release(version="1.3.0"),
-                    fake_release(version="1.4.0"),
-                },
+                frozenset(
+                    [
+                        fake_release(version="1.3.0"),
+                        fake_release(version="1.4.0"),
+                    ]
+                ),
             ),
             EagerLazyReleaseSet(
-                {
-                    EagerLazyRelease(fake_release(version="1.3.0")),
-                    EagerLazyRelease(fake_release(version="1.4.0")),
-                }
+                frozenset(
+                    [
+                        EagerLazyRelease(fake_release(version="1.3.0")),
+                        EagerLazyRelease(fake_release(version="1.4.0")),
+                    ]
+                )
             ),
         ),
         (
-            EagerLazyReleaseSet(set()),
-            EagerLazyReleaseSet(set()),
+            EagerLazyReleaseSet(frozenset()),
+            EagerLazyReleaseSet(frozenset()),
         ),
         (
             EagerLazyReleaseSet(
-                {
-                    EagerLazyRelease(fake_release(version="1.5.0")),
-                    EagerLazyRelease(fake_release(version="1.6.0")),
-                },
+                frozenset(
+                    [
+                        EagerLazyRelease(fake_release(version="1.5.0")),
+                        EagerLazyRelease(fake_release(version="1.6.0")),
+                    ]
+                ),
             ),
             EagerLazyReleaseSet(
-                {
-                    EagerLazyRelease(fake_release(version="1.5.0")),
-                    EagerLazyRelease(fake_release(version="1.6.0")),
-                }
+                frozenset(
+                    [
+                        EagerLazyRelease(fake_release(version="1.5.0")),
+                        EagerLazyRelease(fake_release(version="1.6.0")),
+                    ]
+                )
             ),
         ),
         (
@@ -268,7 +282,7 @@ def test_specifier_lazy_release_set() -> None:
             LazyRequirement(
                 package="foo.bar",
                 url=None,
-                extras=set(),
+                extras=frozenset(),
                 specifier=get_lazy_specifier_set(">=1.12.3,<2.0.0"),
                 marker=None,
             ),
@@ -372,7 +386,7 @@ def test_lazy_specifier_set() -> None:
     specifier_2 = MagicMock(LazySpecifier)
     specifier_2.resolve.return_value = Specifier("<2.0.0")
 
-    lazy = LazySpecifierSet({specifier_1, specifier_2})
+    lazy = LazySpecifierSet(frozenset([specifier_1, specifier_2]))
 
     context = MagicMock(PackageContext)
     assert SpecifierSet(">=1.2.3,<2.0.0") == lazy.resolve(context)
@@ -383,22 +397,28 @@ def test_lazy_specifier_set() -> None:
 @pytest.mark.parametrize(
     "specifier_set,expected",
     [
-        (">=1.1.0", LazySpecifierSet({get_lazy_specifier(">=1.1.0")})),
+        (">=1.1.0", LazySpecifierSet(frozenset([get_lazy_specifier(">=1.1.0")]))),
         (
             Specifier(">=1.2.0"),
-            LazySpecifierSet({get_lazy_specifier(">=1.2.0")}),
+            LazySpecifierSet(frozenset([get_lazy_specifier(">=1.2.0")])),
         ),
         (
             get_lazy_specifier(">=1.3.0"),
-            LazySpecifierSet({get_lazy_specifier(">=1.3.0")}),
+            LazySpecifierSet(frozenset([get_lazy_specifier(">=1.3.0")])),
         ),
         (
             SpecifierSet(">=1.4.0,<2.0.0"),
-            LazySpecifierSet({get_lazy_specifier(">=1.4.0"), get_lazy_specifier("<2.0.0")}),
+            LazySpecifierSet(
+                frozenset([get_lazy_specifier(">=1.4.0"), get_lazy_specifier("<2.0.0")])
+            ),
         ),
         (
-            LazySpecifierSet({get_lazy_specifier(">=1.5.0"), get_lazy_specifier("<2.0.0")}),
-            LazySpecifierSet({get_lazy_specifier(">=1.5.0"), get_lazy_specifier("<2.0.0")}),
+            LazySpecifierSet(
+                frozenset([get_lazy_specifier(">=1.5.0"), get_lazy_specifier("<2.0.0")])
+            ),
+            LazySpecifierSet(
+                frozenset([get_lazy_specifier(">=1.5.0"), get_lazy_specifier("<2.0.0")])
+            ),
         ),
     ],
 )
@@ -423,7 +443,7 @@ def test_lazy_requirement__specifier() -> None:
     requirement = LazyRequirement(
         "foo.bar",
         None,
-        {"extra_1", "extra_2"},
+        frozenset(["extra_1", "extra_2"]),
         specifier_set,
         Marker("python_version>'2.0'"),
     )
@@ -443,8 +463,8 @@ def test_lazy_requirement__url() -> None:
     requirement = LazyRequirement(
         "foo.bar",
         "http://path1/path2",
-        set(),
-        LazySpecifierSet(set()),
+        frozenset(),
+        LazySpecifierSet(frozenset()),
         None,
     )
 
@@ -464,8 +484,8 @@ def test_lazy_requirement__url() -> None:
             LazyRequirement(
                 package="foo.bar",
                 url=None,
-                extras=set(),
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=None,
             ),
         ),
@@ -474,7 +494,7 @@ def test_lazy_requirement__url() -> None:
             LazyRequirement(
                 package="foo.bar",
                 url=None,
-                extras=set(),
+                extras=frozenset(),
                 specifier=get_lazy_specifier_set("==1.1.0"),
                 marker=None,
             ),
@@ -484,7 +504,7 @@ def test_lazy_requirement__url() -> None:
             LazyRequirement(
                 package=None,
                 url=None,
-                extras=set(),
+                extras=frozenset(),
                 specifier=get_lazy_specifier_set("==1.2.0"),
                 marker=None,
             ),
@@ -494,7 +514,7 @@ def test_lazy_requirement__url() -> None:
             LazyRequirement(
                 package=None,
                 url=None,
-                extras=set(),
+                extras=frozenset(),
                 specifier=get_lazy_specifier_set("==1.3.0"),
                 marker=None,
             ),
@@ -504,7 +524,7 @@ def test_lazy_requirement__url() -> None:
             LazyRequirement(
                 package=None,
                 url=None,
-                extras=set(),
+                extras=frozenset(),
                 specifier=get_lazy_specifier_set(">=1.4.0,<2.0.0"),
                 marker=None,
             ),
@@ -514,7 +534,7 @@ def test_lazy_requirement__url() -> None:
             LazyRequirement(
                 package=None,
                 url=None,
-                extras=set(),
+                extras=frozenset(),
                 specifier=get_lazy_specifier_set(">=1.4.0,<2.0.0"),
                 marker=None,
             ),
@@ -524,7 +544,7 @@ def test_lazy_requirement__url() -> None:
             LazyRequirement(
                 package="foo.bar",
                 url=None,
-                extras={"extra"},
+                extras=frozenset(["extra"]),
                 specifier=get_lazy_specifier_set("==1.5.0"),
                 marker=Marker("python_version > '2.0.0'"),
             ),
@@ -534,8 +554,8 @@ def test_lazy_requirement__url() -> None:
             LazyRequirement(
                 package="foo.bar",
                 url="http://path/v1.6.0",
-                extras=set(),
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=None,
             ),
         ),
@@ -543,14 +563,14 @@ def test_lazy_requirement__url() -> None:
             LazyRequirement(
                 package="foo.bar",
                 url=None,
-                extras={"extra"},
+                extras=frozenset(["extra"]),
                 specifier=get_lazy_specifier_set("==1.7.0"),
                 marker=Marker("python_version > '2.0.0'"),
             ),
             LazyRequirement(
                 package="foo.bar",
                 url=None,
-                extras={"extra"},
+                extras=frozenset(["extra"]),
                 specifier=get_lazy_specifier_set("==1.7.0"),
                 marker=Marker("python_version > '2.0.0'"),
             ),
@@ -559,15 +579,15 @@ def test_lazy_requirement__url() -> None:
             LazyRequirement(
                 package="foo.bar",
                 url="http://path/v1.8.0",
-                extras=set(),
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=None,
             ),
             LazyRequirement(
                 package="foo.bar",
                 url="http://path/v1.8.0",
-                extras=set(),
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=None,
             ),
         ),
@@ -587,8 +607,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package="foo.bar",
                 url=None,
-                extras=set(),
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=None,
             ),
         ),
@@ -603,8 +623,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package="foo.bar",
                 url="http://path/v1.3.0",
-                extras=set(),
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=None,
             ),
         ),
@@ -614,8 +634,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package="foo.bar",
                 url=None,
-                extras={"extra1"},
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(["extra1"]),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=None,
             ),
         ),
@@ -625,7 +645,7 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package="foo.bar",
                 url=None,
-                extras=set(),
+                extras=frozenset(),
                 specifier=get_lazy_specifier_set(">1.5.0"),
                 marker=None,
             ),
@@ -636,7 +656,7 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package="foo.bar",
                 url=None,
-                extras=set(),
+                extras=frozenset(),
                 specifier=get_lazy_specifier_set(">1.5.0"),
                 marker=None,
             ),
@@ -647,8 +667,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package="foo.bar",
                 url=None,
-                extras=set(),
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=Marker("python_version>'2.1'"),
             ),
         ),
@@ -659,8 +679,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package="foo.bar",
                 url="http://path/v2.0.0",
-                extras=set(),
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=None,
             ),
         ),
@@ -670,8 +690,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url="http://path/v2.0.0",
-                extras=set(),
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=None,
             ),
         ),
@@ -686,8 +706,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url="http://path/v2.0.0",
-                extras={"extra1"},
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(["extra1"]),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=None,
             ),
         ),
@@ -707,8 +727,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url="http://path/v2.0.0",
-                extras=set(),
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=Marker("python_version>'2.1'"),
             ),
         ),
@@ -719,8 +739,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package="foo.bar",
                 url=None,
-                extras={"extra"},
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(["extra"]),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=None,
             ),
         ),
@@ -730,8 +750,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url="http://path/v1.3.0",
-                extras={"extra"},
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(["extra"]),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=None,
             ),
         ),
@@ -741,8 +761,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url=None,
-                extras={"extra"},
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(["extra"]),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=None,
             ),
         ),
@@ -752,8 +772,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url=None,
-                extras={"extra", "extra1"},
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(["extra", "extra1"]),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=None,
             ),
         ),
@@ -763,7 +783,7 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url=None,
-                extras={"extra"},
+                extras=frozenset(["extra"]),
                 specifier=get_lazy_specifier_set(">1.5.0"),
                 marker=None,
             ),
@@ -774,7 +794,7 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url=None,
-                extras={"extra"},
+                extras=frozenset(["extra"]),
                 specifier=get_lazy_specifier_set(">1.5.0"),
                 marker=None,
             ),
@@ -785,8 +805,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url=None,
-                extras={"extra"},
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(["extra"]),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=Marker("python_version>'2.1'"),
             ),
         ),
@@ -797,8 +817,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package="foo.bar",
                 url=None,
-                extras=set(),
-                specifier=LazySpecifierSet({get_lazy_specifier("==2.0.0")}),
+                extras=frozenset(),
+                specifier=LazySpecifierSet(frozenset([get_lazy_specifier("==2.0.0")])),
                 marker=None,
             ),
         ),
@@ -813,7 +833,7 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url=None,
-                extras={"extra1"},
+                extras=frozenset(["extra1"]),
                 specifier=get_lazy_specifier_set("==2.0.0"),
                 marker=None,
             ),
@@ -839,7 +859,7 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url=None,
-                extras=set(),
+                extras=frozenset(),
                 specifier=get_lazy_specifier_set("==2.0.0"),
                 marker=Marker("python_version>'2.1'"),
             ),
@@ -851,8 +871,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package="foo.bar",
                 url=None,
-                extras=set(),
-                specifier=LazySpecifierSet({get_lazy_specifier("==2.0.0")}),
+                extras=frozenset(),
+                specifier=LazySpecifierSet(frozenset([get_lazy_specifier("==2.0.0")])),
                 marker=None,
             ),
         ),
@@ -867,7 +887,7 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url=None,
-                extras={"extra1"},
+                extras=frozenset(["extra1"]),
                 specifier=get_lazy_specifier_set("==2.0.0"),
                 marker=None,
             ),
@@ -893,7 +913,7 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url=None,
-                extras=set(),
+                extras=frozenset(),
                 specifier=get_lazy_specifier_set("==2.0.0"),
                 marker=Marker("python_version>'2.1'"),
             ),
@@ -905,8 +925,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package="foo.bar",
                 url=None,
-                extras=set(),
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=Marker("python_version=='3.0'"),
             ),
         ),
@@ -916,8 +936,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url="http://path/v1.3.0",
-                extras=set(),
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=Marker("python_version=='3.0'"),
             ),
         ),
@@ -927,8 +947,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url=None,
-                extras={"extra1"},
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(["extra1"]),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=Marker("python_version=='3.0'"),
             ),
         ),
@@ -938,7 +958,7 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url=None,
-                extras=set(),
+                extras=frozenset(),
                 specifier=get_lazy_specifier_set(">1.5.0"),
                 marker=Marker("python_version=='3.0'"),
             ),
@@ -949,7 +969,7 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url=None,
-                extras=set(),
+                extras=frozenset(),
                 specifier=get_lazy_specifier_set(">1.5.0"),
                 marker=Marker("python_version=='3.0'"),
             ),
@@ -960,8 +980,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url=None,
-                extras=set(),
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=Marker("python_version=='3.0'"),
             ),
         ),
@@ -971,8 +991,8 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
             LazyRequirement(
                 package=None,
                 url=None,
-                extras=set(),
-                specifier=LazySpecifierSet(set()),
+                extras=frozenset(),
+                specifier=LazySpecifierSet(frozenset()),
                 marker=Marker("python_version=='3.0' and python_version>'2.1'"),
             ),
         ),
@@ -988,3 +1008,270 @@ def test_compose(
             lhs & rhs  # pylint: disable=pointless-statement
     else:
         assert (lhs & rhs) == expected
+
+
+@pytest.mark.parametrize(
+    "requirement_set,expected",
+    [
+        (
+            "foo.bar",
+            LazyRequirementSet(
+                frozenset(
+                    [
+                        LazyRequirement(
+                            package="foo.bar",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=LazySpecifierSet(frozenset()),
+                            marker=None,
+                        )
+                    ]
+                )
+            ),
+        ),
+        (
+            "foo.bar==1.1.0",
+            LazyRequirementSet(
+                frozenset(
+                    [
+                        LazyRequirement(
+                            package="foo.bar",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=get_lazy_specifier_set("==1.1.0"),
+                            marker=None,
+                        )
+                    ]
+                )
+            ),
+        ),
+        (
+            Specifier("==1.2.0"),
+            LazyRequirementSet(
+                frozenset(
+                    [
+                        LazyRequirement(
+                            package=None,
+                            url=None,
+                            extras=frozenset(),
+                            specifier=get_lazy_specifier_set("==1.2.0"),
+                            marker=None,
+                        )
+                    ]
+                )
+            ),
+        ),
+        (
+            get_lazy_specifier("==1.3.0"),
+            LazyRequirementSet(
+                frozenset(
+                    [
+                        LazyRequirement(
+                            package=None,
+                            url=None,
+                            extras=frozenset(),
+                            specifier=get_lazy_specifier_set("==1.3.0"),
+                            marker=None,
+                        )
+                    ]
+                )
+            ),
+        ),
+        (
+            SpecifierSet(">=1.4.0,<2.0.0"),
+            LazyRequirementSet(
+                frozenset(
+                    [
+                        LazyRequirement(
+                            package=None,
+                            url=None,
+                            extras=frozenset(),
+                            specifier=get_lazy_specifier_set(">=1.4.0,<2.0.0"),
+                            marker=None,
+                        )
+                    ]
+                )
+            ),
+        ),
+        (
+            get_lazy_specifier_set(">=1.4.0,<2.0.0"),
+            LazyRequirementSet(
+                frozenset(
+                    [
+                        LazyRequirement(
+                            package=None,
+                            url=None,
+                            extras=frozenset(),
+                            specifier=get_lazy_specifier_set(">=1.4.0,<2.0.0"),
+                            marker=None,
+                        )
+                    ]
+                )
+            ),
+        ),
+        (
+            Requirement("foo.bar[extra]==1.5.0; python_version > '2.0.0'"),
+            LazyRequirementSet(
+                frozenset(
+                    [
+                        LazyRequirement(
+                            package="foo.bar",
+                            url=None,
+                            extras=frozenset(["extra"]),
+                            specifier=get_lazy_specifier_set("==1.5.0"),
+                            marker=Marker("python_version > '2.0.0'"),
+                        )
+                    ]
+                )
+            ),
+        ),
+        (
+            LazyRequirement(
+                package="foo.bar",
+                url=None,
+                extras=frozenset(["extra"]),
+                specifier=get_lazy_specifier_set("==1.7.0"),
+                marker=Marker("python_version > '2.0.0'"),
+            ),
+            LazyRequirementSet(
+                frozenset(
+                    [
+                        LazyRequirement(
+                            package="foo.bar",
+                            url=None,
+                            extras=frozenset(["extra"]),
+                            specifier=get_lazy_specifier_set("==1.7.0"),
+                            marker=Marker("python_version > '2.0.0'"),
+                        )
+                    ]
+                )
+            ),
+        ),
+        (
+            [
+                Requirement("foo>=1.2.3"),
+                Requirement("bar==2.0.0"),
+            ],
+            LazyRequirementSet(
+                frozenset(
+                    [
+                        LazyRequirement(
+                            package="foo",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=get_lazy_specifier_set(">=1.2.3"),
+                            marker=None,
+                        ),
+                        LazyRequirement(
+                            package="bar",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=get_lazy_specifier_set("==2.0.0"),
+                            marker=None,
+                        ),
+                    ]
+                ),
+            ),
+        ),
+        (
+            {
+                "foo": Requirement("foo>=1.2.3"),
+                "bar": Requirement("bar==2.0.0"),
+            },
+            LazyRequirementSet(
+                frozenset(
+                    [
+                        LazyRequirement(
+                            package="foo",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=get_lazy_specifier_set(">=1.2.3"),
+                            marker=None,
+                        ),
+                        LazyRequirement(
+                            package="bar",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=get_lazy_specifier_set("==2.0.0"),
+                            marker=None,
+                        ),
+                    ]
+                ),
+            ),
+        ),
+        (
+            RequirementSet.new(
+                [
+                    Requirement("foo>=1.2.3"),
+                    Requirement("bar==2.0.0"),
+                ],
+            ),
+            LazyRequirementSet(
+                frozenset(
+                    [
+                        LazyRequirement(
+                            package="foo",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=get_lazy_specifier_set(">=1.2.3"),
+                            marker=None,
+                        ),
+                        LazyRequirement(
+                            package="bar",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=get_lazy_specifier_set("==2.0.0"),
+                            marker=None,
+                        ),
+                    ]
+                ),
+            ),
+        ),
+        (
+            LazyRequirementSet(
+                frozenset(
+                    [
+                        LazyRequirement(
+                            package="foo",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=get_lazy_specifier_set(">=1.2.3"),
+                            marker=None,
+                        ),
+                        LazyRequirement(
+                            package="bar",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=get_lazy_specifier_set("==2.0.0"),
+                            marker=None,
+                        ),
+                    ]
+                ),
+            ),
+            LazyRequirementSet(
+                frozenset(
+                    [
+                        LazyRequirement(
+                            package="foo",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=get_lazy_specifier_set(">=1.2.3"),
+                            marker=None,
+                        ),
+                        LazyRequirement(
+                            package="bar",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=get_lazy_specifier_set("==2.0.0"),
+                            marker=None,
+                        ),
+                    ]
+                ),
+            ),
+        ),
+    ],
+)
+def test_get_lazy_requirement_set(
+    requirement_set: AnyRequirementSet, expected: LazyRequirementSet
+) -> None:
+    assert get_lazy_requirement_set(requirement_set) == expected

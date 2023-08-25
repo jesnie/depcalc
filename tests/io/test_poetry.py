@@ -16,8 +16,9 @@ from compreq import (
     CompReq,
     Context,
     PoetryPyprojectFile,
+    RequirementSet,
     get_lazy_release_set,
-    get_lazy_requirement,
+    get_lazy_requirement_set,
 )
 from tests.utils import fake_release_set
 
@@ -34,10 +35,10 @@ pack4 = "~1.2"
 pack5 = "^1.2.3"
 pack6 = "^0.1.0"
 packextra = {extras = ["extra1", "extra2"], version = "^1.2.3"}
-packurl = {url = "http://www.test.com/test/pack7-1.2.3.tar.gz"}
-packpath = {path = "/home/compreq"}
 packgit = {git = "https://github.com/pack6/pack6"}
 packmarker = {version = ">=1.2.3", markers = "platform_system != \\"Darwin\\" or platform_machine != 'arm64'"}
+packpath = {path = "/home/compreq"}
+packurl = {url = "http://www.test.com/test/pack7-1.2.3.tar.gz"}
 
 [tool.poetry.group.dev.dependencies]
 pack-dev1 = "<2.0.0,>=1.2.3"
@@ -56,34 +57,38 @@ pack4 = "~1.2"
 pack5 = "<2.0.0,>=1.2.3"
 pack6 = "<0.2.0,>=0.1.0"
 packextra = {extras = ["extra1", "extra2"], version = "<2.0.0,>=1.2.3"}
-packurl = {url = "http://www.test.com/test/pack7-1.2.3.tar.gz"}
-packpath = {path = "/home/compreq"}
 packgit = {git = "https://github.com/pack6/pack6"}
 packmarker = {version = ">=1.2.3", markers = "platform_system != \\"Darwin\\" or platform_machine != \\"arm64\\""}
+packpath = {path = "/home/compreq"}
+packurl = {url = "http://www.test.com/test/pack7-1.2.3.tar.gz"}
 
 [tool.poetry.group.dev.dependencies]
 pack-dev1 = "<2.0.0,>=1.2.3"
 """
 
-MAIN_REQUIREMENTS = {
-    "pack1": Requirement("pack1!=1.2.5,<2.0.0,>=1.2.3"),
-    "pack2": Requirement("pack2<=1.9.0,>1.2.3"),
-    "pack3": Requirement("pack3==1.2.5"),
-    "pack4": Requirement("pack4~=1.2"),
-    "pack5": Requirement("pack5<2.0.0,>=1.2.3"),
-    "pack6": Requirement("pack6<0.2.0,>=0.1.0"),
-    "packextra": Requirement("packextra[extra1, extra2]<2.0.0,>=1.2.3"),
-    "packurl": Requirement("packurl@http://www.test.com/test/pack7-1.2.3.tar.gz"),
-    "packpath": Requirement("packpath@file:///home/compreq"),
-    "packgit": Requirement("packgit@git+https://github.com/pack6/pack6"),
-    "packmarker": Requirement(
-        "packmarker>=1.2.3; platform_system != 'Darwin' or platform_machine != 'arm64'"
-    ),
-}
+MAIN_REQUIREMENTS = RequirementSet.new(
+    [
+        Requirement("pack1!=1.2.5,<2.0.0,>=1.2.3"),
+        Requirement("pack2<=1.9.0,>1.2.3"),
+        Requirement("pack3==1.2.5"),
+        Requirement("pack4~=1.2"),
+        Requirement("pack5<2.0.0,>=1.2.3"),
+        Requirement("pack6<0.2.0,>=0.1.0"),
+        Requirement("packextra[extra1, extra2]<2.0.0,>=1.2.3"),
+        Requirement("packurl@http://www.test.com/test/pack7-1.2.3.tar.gz"),
+        Requirement("packpath@file:///home/compreq"),
+        Requirement("packgit@git+https://github.com/pack6/pack6"),
+        Requirement(
+            "packmarker>=1.2.3; platform_system != 'Darwin' or platform_machine != 'arm64'"
+        ),
+    ]
+)
 
-DEV_REQUIREMENTS = {
-    "pack-dev1": Requirement("pack-dev1<2.0.0,>=1.2.3"),
-}
+DEV_REQUIREMENTS = RequirementSet.new(
+    [
+        Requirement("pack-dev1<2.0.0,>=1.2.3"),
+    ]
+)
 
 
 def test_poetry_pyproject_file__get_requirements(tmp_path: Path) -> None:
@@ -112,7 +117,7 @@ version = "0.1.0"
     with PoetryPyprojectFile.open(pyproject_path) as pyproject:
         compreq = MagicMock(CompReq)
         compreq.context = MagicMock(Context)
-        compreq.resolve_requirement.side_effect = lambda r: get_lazy_requirement(r).resolve(
+        compreq.resolve_requirement_set.side_effect = lambda r: get_lazy_requirement_set(r).resolve(
             compreq.context
         )
 

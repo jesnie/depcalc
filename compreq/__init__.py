@@ -17,6 +17,7 @@ from compreq.lazy import (
     AnyRelease,
     AnyReleaseSet,
     AnyRequirement,
+    AnyRequirementSet,
     AnySpecifier,
     AnySpecifierOperator,
     AnySpecifierSet,
@@ -27,6 +28,7 @@ from compreq.lazy import (
     LazyRelease,
     LazyReleaseSet,
     LazyRequirement,
+    LazyRequirementSet,
     LazySpecifier,
     LazySpecifierSet,
     LazyVersion,
@@ -39,6 +41,7 @@ from compreq.lazy import (
     get_lazy_release,
     get_lazy_release_set,
     get_lazy_requirement,
+    get_lazy_requirement_set,
     get_lazy_specifier,
     get_lazy_specifier_set,
     get_lazy_version,
@@ -101,6 +104,7 @@ from compreq.releases import (
     infer_and_set_successor,
     infer_successor,
 )
+from compreq.requirements import RequirementSet
 from compreq.roots import CompReq
 from compreq.time import UtcDatetime, is_utc_datetime, utc_now
 from compreq.versiontokens import VersionToken
@@ -115,6 +119,7 @@ __all__ = [
     "AnyRelease",
     "AnyReleaseSet",
     "AnyRequirement",
+    "AnyRequirementSet",
     "AnySpecifier",
     "AnySpecifierOperator",
     "AnySpecifierSet",
@@ -138,6 +143,7 @@ __all__ = [
     "LazyRelease",
     "LazyReleaseSet",
     "LazyRequirement",
+    "LazyRequirementSet",
     "LazySpecifier",
     "LazySpecifierSet",
     "LazyVersion",
@@ -164,6 +170,7 @@ __all__ = [
     "Release",
     "ReleaseLazyVersion",
     "ReleaseSet",
+    "RequirementSet",
     "SpecifierLazyReleaseSet",
     "SpecifierOperator",
     "TextReFile",
@@ -182,6 +189,7 @@ __all__ = [
     "get_lazy_release",
     "get_lazy_release_set",
     "get_lazy_requirement",
+    "get_lazy_requirement_set",
     "get_lazy_specifier",
     "get_lazy_specifier_set",
     "get_lazy_version",
