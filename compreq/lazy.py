@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
 from enum import Enum
 from itertools import chain
-from typing import AbstractSet, Final, TypeAlias, Union, overload
+from typing import Final, TypeAlias, Union, overload
 
 from packaging.markers import Marker
 from packaging.requirements import Requirement
@@ -13,6 +14,7 @@ from packaging.version import Version
 
 from compreq.contexts import Context, PackageContext
 from compreq.releases import Release, ReleaseSet
+from compreq.requirements import RequirementSet
 
 
 class LazyRelease(ABC):
@@ -58,12 +60,12 @@ class LazyReleaseSet(ABC):
 class EagerLazyReleaseSet(LazyReleaseSet):
     """`LazyReleaseSet` that returns a given constant set of (lazy) releases."""
 
-    releases: AbstractSet[LazyRelease]
+    releases: frozenset[LazyRelease]
 
     def resolve(self, context: PackageContext) -> ReleaseSet:
         return ReleaseSet(
             context.package,
-            {r.resolve(context) for r in self.releases},
+            frozenset(r.resolve(context) for r in self.releases),
         )
 
 
@@ -94,11 +96,9 @@ class ProdLazyReleaseSet(LazyReleaseSet):
         release_set = self.source.resolve(context)
         return ReleaseSet(
             package=release_set.package,
-            releases={
-                r
-                for r in release_set.releases
-                if not (r.version.is_prerelease or r.version.is_devrelease)
-            },
+            releases=frozenset(
+                r for r in release_set if not (r.version.is_prerelease or r.version.is_devrelease)
+            ),
         )
 
 
@@ -115,7 +115,7 @@ class PreLazyReleaseSet(LazyReleaseSet):
         release_set = self.source.resolve(context)
         return ReleaseSet(
             package=release_set.package,
-            releases={r for r in release_set.releases if not r.version.is_devrelease},
+            releases=frozenset(r for r in release_set if not r.version.is_devrelease),
         )
 
 
@@ -133,7 +133,7 @@ class SpecifierLazyReleaseSet(LazyReleaseSet):
         specifier_set = self.specifier_set.resolve(context)
         return ReleaseSet(
             package=release_set.package,
-            releases={r for r in release_set.releases if r.version in specifier_set},
+            releases=frozenset(r for r in release_set if r.version in specifier_set),
         )
 
 
@@ -176,9 +176,9 @@ def get_lazy_release_set(release_set: AnyReleaseSet | None) -> LazyReleaseSet:
     if isinstance(release_set, Release):
         release_set = EagerLazyRelease(release_set)
     if isinstance(release_set, LazyRelease):
-        release_set = EagerLazyReleaseSet({release_set})
+        release_set = EagerLazyReleaseSet(frozenset([release_set]))
     if isinstance(release_set, ReleaseSet):
-        release_set = EagerLazyReleaseSet({get_lazy_release(r) for r in release_set.releases})
+        release_set = EagerLazyReleaseSet(frozenset(get_lazy_release(r) for r in release_set))
     if isinstance(release_set, LazyReleaseSet):
         return release_set
     raise AssertionError(f"Unknown type of release set: {type(release_set)}")
@@ -341,7 +341,7 @@ class LazySpecifierSet:
 
     """
 
-    specifiers: AbstractSet[LazySpecifier]
+    specifiers: frozenset[LazySpecifier]
 
     def resolve(self, context: PackageContext) -> SpecifierSet:
         """Compute the `SpecifierSet`."""
@@ -382,9 +382,9 @@ def get_lazy_specifier_set(specifier_set: AnySpecifierSet) -> LazySpecifierSet:
     if isinstance(specifier_set, Specifier):
         specifier_set = get_lazy_specifier(specifier_set)
     if isinstance(specifier_set, LazySpecifier):
-        specifier_set = LazySpecifierSet({specifier_set})
+        specifier_set = LazySpecifierSet(frozenset([specifier_set]))
     if isinstance(specifier_set, SpecifierSet):
-        specifier_set = LazySpecifierSet({get_lazy_specifier(s) for s in specifier_set})
+        specifier_set = LazySpecifierSet(frozenset(get_lazy_specifier(s) for s in specifier_set))
     if isinstance(specifier_set, LazySpecifierSet):
         return specifier_set
     raise AssertionError(f"Unknown type of specifier set: {type(specifier_set)}")
@@ -406,7 +406,7 @@ def get_marker(marker: AnyMarker) -> Marker:
 @dataclass(order=True, frozen=True)
 class LazyRequirement:
     """
-    Strategy for computing a `Release` in a context.
+    Strategy for computing a `Requirement` in a context.
 
     A `LazyRequirement` can be in a partially configured state. To be valid a `LazyRequirement`
     must:
@@ -433,7 +433,7 @@ class LazyRequirement:
     Mutually exclusive with `specifier`.
     """
 
-    extras: AbstractSet[str]
+    extras: frozenset[str]
     """Set of extras to install."""
 
     specifier: LazySpecifierSet
@@ -491,8 +491,8 @@ class LazyRequirement:
 EMPTY_REQUIREMENT: Final[LazyRequirement] = LazyRequirement(
     package=None,
     url=None,
-    extras=set(),
-    specifier=LazySpecifierSet(set()),
+    extras=frozenset(),
+    specifier=LazySpecifierSet(frozenset()),
     marker=None,
 )
 """
@@ -531,7 +531,7 @@ def get_lazy_requirement(requirement: AnyRequirement) -> LazyRequirement:
         requirement = LazyRequirement(
             package=requirement.name,
             url=requirement.url,
-            extras=requirement.extras,
+            extras=frozenset(requirement.extras),
             specifier=get_lazy_specifier_set(requirement.specifier),
             marker=requirement.marker,
         )
@@ -579,7 +579,7 @@ def compose(lhs: AnyRequirement, rhs: AnyRequirement) -> LazySpecifierSet | Lazy
         ), f"A requirement can have at most one url. Found: {lhr.url} and {rhr.url}."
         package = lhr.package or rhr.package
         url = lhr.url or rhr.url
-        extras = set(chain(lhr.extras, rhr.extras))
+        extras = frozenset(chain(lhr.extras, rhr.extras))
         specifier = compose(lhr.specifier, rhr.specifier)
         marker: Marker | None
         if lhr.marker is None:
@@ -600,4 +600,53 @@ def compose(lhs: AnyRequirement, rhs: AnyRequirement) -> LazySpecifierSet | Lazy
     else:
         lhss = get_lazy_specifier_set(lhs)
         rhss = get_lazy_specifier_set(rhs)
-        return LazySpecifierSet(set(chain(lhss.specifiers, rhss.specifiers)))
+        return LazySpecifierSet(frozenset(chain(lhss.specifiers, rhss.specifiers)))
+
+
+@dataclass(order=True, frozen=True)
+class LazyRequirementSet:
+    """
+    Strategy for computing a `RequirementSet` in a context.
+    """
+
+    requirements: frozenset[LazyRequirement]
+
+    def resolve(self, context: Context) -> RequirementSet:
+        """Compute the `RequirementSet`."""
+        return RequirementSet.new(r.resolve(context) for r in self.requirements)
+
+
+AnyRequirementSet: TypeAlias = (
+    str
+    | Specifier
+    | LazySpecifier
+    | SpecifierSet
+    | LazySpecifierSet
+    | Requirement
+    | LazyRequirement
+    | Mapping[str, AnyRequirement]
+    | Iterable[AnyRequirement]
+    | RequirementSet
+    | LazyRequirementSet
+)
+"""Type alias for anything that can be converted to a `LazyRequirementSet`."""
+
+
+def get_lazy_requirement_set(requirement_set: AnyRequirementSet) -> LazyRequirementSet:
+    """Get a `LazyRequirementSet` for the given requirement-set-like value."""
+    if isinstance(
+        requirement_set,
+        (str, Specifier, LazySpecifier, SpecifierSet, LazySpecifierSet, Requirement),
+    ):
+        requirement_set = get_lazy_requirement(requirement_set)
+    if isinstance(requirement_set, LazyRequirement):
+        requirement_set = LazyRequirementSet(frozenset([requirement_set]))
+    if isinstance(requirement_set, Mapping):
+        requirement_set = requirement_set.values()
+    if isinstance(requirement_set, Iterable):
+        requirement_set = LazyRequirementSet(
+            frozenset(get_lazy_requirement(r) for r in requirement_set)
+        )
+    if isinstance(requirement_set, LazyRequirementSet):
+        return requirement_set
+    raise AssertionError(f"Unknown type of requirement set: {type(requirement_set)}")

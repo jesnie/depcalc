@@ -1,4 +1,4 @@
-from typing import Any, Collection, Mapping, Sequence
+from typing import Any, Sequence
 
 from packaging.markers import Marker
 from packaging.requirements import Requirement
@@ -8,9 +8,10 @@ from tomlkit import inline_table
 
 from compreq.classifiers import set_python_classifiers
 from compreq.io.pyproject import PyprojectFile
-from compreq.lazy import AnyReleaseSet, AnyRequirement
+from compreq.lazy import AnyReleaseSet, AnyRequirementSet
 from compreq.levels import REL_MAJOR
 from compreq.operators import CeilLazyVersion
+from compreq.requirements import RequirementSet
 from compreq.roots import CompReq
 
 
@@ -24,14 +25,14 @@ class PoetryPyprojectFile(PyprojectFile):
             pyproject.set_requirements(...)
     """
 
-    def get_requirements(self, group: str | None = None) -> Mapping[str, Requirement]:
+    def get_requirements(self, group: str | None = None) -> RequirementSet:
         """
         Get the given `group` of requirements. If `group` is `None` the main group is returned.
         """
-        return {
-            package: self._parse_requirement(package, toml)
+        return RequirementSet.new(
+            self._parse_requirement(package, toml)
             for package, toml in self._get_dependencies(group).items()
-        }
+        )
 
     def _parse_requirement(self, package: str, toml: Any) -> Requirement:
         result = Requirement.__new__(Requirement)
@@ -75,19 +76,16 @@ class PoetryPyprojectFile(PyprojectFile):
     def set_requirements(
         self,
         cr: CompReq,
-        requirements: Mapping[str, AnyRequirement] | Collection[AnyRequirement],
+        requirement_set: AnyRequirementSet,
         group: str | None = None,
     ) -> None:
         """
         Set the given `group` of requirements. If `group` is `None` the main group is set.
         """
-        requirements_collection = (
-            requirements.values() if hasattr(requirements, "values") else requirements
-        )
+        requirements = cr.resolve_requirement_set(requirement_set)
         requirements_toml = self._get_dependencies(group)
         requirements_toml.clear()
-        for requirement in requirements_collection:
-            r = cr.resolve_requirement(requirement)
+        for r in requirements.values():
             requirements_toml[r.name] = self._format_requirement(r)
 
     def _format_requirement(self, requirement: Requirement) -> Any:

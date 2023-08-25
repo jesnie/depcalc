@@ -44,4 +44,4 @@ def get_pypi_releases(package: str) -> ReleaseSet:
             )
         )
 
-    return infer_and_set_successor(ReleaseSet(package, result))
+    return infer_and_set_successor(ReleaseSet(package, frozenset(result)))

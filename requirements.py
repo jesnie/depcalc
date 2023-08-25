@@ -7,7 +7,7 @@ def set_python_version_in_github_actions(python_release_set: cr.ReleaseSet) -> N
     minor_versions = sorted(
         set(
             cr.FloorLazyVersion.floor(cr.MINOR, r.version, keep_trailing_zeros=False)
-            for r in python_release_set.releases
+            for r in python_release_set
         )
     )
     default_version = min(minor_versions)

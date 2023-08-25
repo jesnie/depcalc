@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Set
 from dataclasses import dataclass, replace
-from typing import AbstractSet, Collection
+from typing import Any, Collection, Iterator
 
 from packaging.version import Version
 
@@ -19,16 +20,25 @@ class Release:
 
 
 @dataclass(frozen=True)
-class ReleaseSet:
+class ReleaseSet(Set[Release]):
     """A set of releases of the same package."""
 
     package: str
-    releases: AbstractSet[Release]
+    releases: frozenset[Release]
 
     def __post_init__(self) -> None:
         assert all(
             r.package == self.package for r in self.releases
         ), f"Inconsistent package names in ReleaseSet. Found: {self}."
+
+    def __iter__(self) -> Iterator[Release]:
+        return iter(self.releases)
+
+    def __contains__(self, release: Any) -> bool:
+        return release in self.releases
+
+    def __len__(self) -> int:
+        return len(self.releases)
 
 
 def infer_successor(versions: Collection[Version]) -> dict[Version, Version | None]:
@@ -54,11 +64,11 @@ def infer_successor(versions: Collection[Version]) -> dict[Version, Version | No
 def infer_and_set_successor(releases: ReleaseSet) -> ReleaseSet:
     """Compute and set the `successor` fields on a set of releases."""
 
-    by_version = {r.version: r for r in releases.releases}
+    by_version = {r.version: r for r in releases}
     successors = infer_successor(by_version)
-    for r in sorted(releases.releases, reverse=True):
+    for r in sorted(releases, reverse=True):
         s = successors.get(r.version)
         if s is not None:
             r = replace(r, successor=by_version[s])
         by_version[r.version] = r
-    return ReleaseSet(package=releases.package, releases=set(by_version.values()))
+    return ReleaseSet(package=releases.package, releases=frozenset(by_version.values()))

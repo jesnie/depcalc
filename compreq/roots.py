@@ -9,17 +9,20 @@ from compreq.lazy import (
     AnyRelease,
     AnyReleaseSet,
     AnyRequirement,
+    AnyRequirementSet,
     AnySpecifier,
     AnySpecifierSet,
     AnyVersion,
     get_lazy_release,
     get_lazy_release_set,
     get_lazy_requirement,
+    get_lazy_requirement_set,
     get_lazy_specifier,
     get_lazy_specifier_set,
     get_lazy_version,
 )
 from compreq.releases import Release, ReleaseSet
+from compreq.requirements import RequirementSet
 
 
 class CompReq:
@@ -83,3 +86,6 @@ class CompReq:
 
     def resolve_requirement(self, requirement: AnyRequirement) -> Requirement:
         return get_lazy_requirement(requirement).resolve(self._context)
+
+    def resolve_requirement_set(self, requirement_set: AnyRequirementSet) -> RequirementSet:
+        return get_lazy_requirement_set(requirement_set).resolve(self._context)
