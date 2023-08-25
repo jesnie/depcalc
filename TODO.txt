@@ -1,8 +1,8 @@
 * Paralellise stuff.
 * Rename package->distribution
-* Support tensorflow_probability -> Python version.
-* Compute consistent lower bound?
+  - DistMetadata to DistributionMetadata
 * python_specifier and default_python as operators? (Remove from root?)
+* Make a release a requirment?
 
 
 Alternatives:

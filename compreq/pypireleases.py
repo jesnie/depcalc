@@ -14,6 +14,7 @@ def get_pypi_releases(package: str) -> ReleaseSet:
     """Get all releases of the given package, from PyPi."""
     url = f"https://pypi.org/pypi/{package}/json"
     data = requests.get(url, timeout=600.0).json()
+    assert {"message": "Not Found"} != data, package
     result = set()
     for version_str, release_data in data["releases"].items():
         version = parse(version_str)
