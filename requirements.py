@@ -3,12 +3,10 @@ from pathlib import Path
 import compreq as cr
 
 
-def set_python_version_in_github_actions(python_release_set: cr.ReleaseSet) -> None:
+def set_python_version_in_github_actions(comp_req: cr.CompReq) -> None:
+    python_release_set = comp_req.resolve_release_set("python", comp_req.python_specifier)
     minor_versions = sorted(
-        set(
-            cr.FloorLazyVersion.floor(cr.MINOR, r.version, keep_trailing_zeros=False)
-            for r in python_release_set
-        )
+        set(cr.floor(cr.MINOR, r.version, keep_trailing_zeros=False) for r in python_release_set)
     )
     default_version = min(minor_versions)
     minor_versions_str = ", ".join(f'"{v}"' for v in minor_versions)
@@ -20,24 +18,22 @@ def set_python_version_in_github_actions(python_release_set: cr.ReleaseSet) -> N
             ref.sub(r"(^ +matrix:\s^ +python: \[).*(\]$)", rf"\g<1>{minor_versions_str}\g<2>")
 
 
-def set_python_version(
-    comp_req: cr.CompReq, pyproject: cr.PoetryPyprojectFile
-) -> cr.AnySpecifierSet:
-    floor = comp_req.resolve_version(
-        "python", cr.floor_ver(cr.MINOR, cr.max_ver(cr.min_age(years=3)))
+def set_python_version(comp_req: cr.CompReq, pyproject: cr.PoetryPyprojectFile) -> cr.CompReq:
+    comp_req = comp_req.for_python(
+        cr.version("<", cr.ceil_ver(cr.MAJOR, cr.max_ver()))
+        & cr.version(">=", cr.floor_ver(cr.MINOR, cr.max_ver(cr.min_age(years=3))))
     )
-    ceil = comp_req.resolve_version("python", cr.ceil_ver(cr.MAJOR, cr.max_ver()))
-    specfiers = cr.version(">=", floor) & cr.version("<", ceil)
 
-    pyproject.set_python_classifiers(comp_req, specfiers)
-    set_python_version_in_github_actions(comp_req.resolve_release_set("python", specfiers))
+    pyproject.set_python_classifiers(comp_req)
+    set_python_version_in_github_actions(comp_req)
+    version = comp_req.default_python
 
     tool = pyproject.toml["tool"]
-    tool["isort"]["py_version"] = int(f"{floor.major}{floor.minor}")
-    tool["black"]["target-version"] = [f"py{floor.major}{floor.minor}"]
-    tool["mypy"]["python_version"] = f"{floor.major}.{floor.minor}"
+    tool["isort"]["py_version"] = int(f"{version.major}{version.minor}")
+    tool["black"]["target-version"] = [f"py{version.major}{version.minor}"]
+    tool["mypy"]["python_version"] = f"{version.major}.{version.minor}"
 
-    return specfiers
+    return comp_req
 
 
 def main() -> None:
@@ -46,8 +42,7 @@ def main() -> None:
             pyproject.get_requirements()["python"].specifier
         ).lower_specifier_set()
         comp_req = cr.CompReq(python_specifier=prev_python_specifier)
-
-        python_specifiers = set_python_version(comp_req, pyproject)
+        comp_req = set_python_version(comp_req, pyproject)
 
         default_range = cr.version(
             ">=",
@@ -69,7 +64,7 @@ def main() -> None:
                 cr.pkg("beautifulsoup4") & default_range,
                 cr.pkg("packaging") & default_range,
                 cr.pkg("pip") & default_range,
-                cr.pkg("python") & python_specifiers,
+                cr.pkg("python") & comp_req.python_specifier,
                 cr.pkg("python-dateutil") & default_range,
                 cr.pkg("requests") & default_range,
                 cr.pkg("tomlkit") & default_range,

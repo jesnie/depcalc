@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import NoReturn, overload
 
 from packaging.requirements import Requirement
@@ -29,40 +31,97 @@ class CompReq:
     """Factory for resolving lazy objects."""
 
     @overload
-    def __init__(self, context: None = None, *, python_specifier: None = None) -> NoReturn:
+    def __init__(
+        self,
+        python_specifier: SpecifierSet | str,
+        *,
+        default_python: Version | str | None = None,
+        context: Context,
+    ) -> NoReturn:
         ...
 
     @overload
-    def __init__(self, context: None = None, *, python_specifier: SpecifierSet | str) -> None:
+    def __init__(
+        self,
+        python_specifier: SpecifierSet | str,
+        *,
+        default_python: Version | str | None = None,
+        context: None = None,
+    ) -> None:
         ...
 
     @overload
-    def __init__(self, context: Context, *, python_specifier: None = None) -> None:
+    def __init__(
+        self,
+        python_specifier: None = None,
+        *,
+        default_python: None = None,
+        context: Context,
+    ) -> None:
         ...
 
     @overload
-    def __init__(self, context: Context, *, python_specifier: SpecifierSet | str) -> NoReturn:
+    def __init__(
+        self,
+        python_specifier: None = None,
+        *,
+        default_python: None = None,
+        context: None = None,
+    ) -> NoReturn:
         ...
 
     def __init__(
-        self, context: Context | None = None, *, python_specifier: SpecifierSet | str | None = None
+        self,
+        python_specifier: SpecifierSet | str | None = None,
+        *,
+        default_python: Version | str | None = None,
+        context: Context | None = None,
     ) -> None:
         """
-        :param context: Context to use. If `None` a default is created. You must set `context` xor
-            `python_specifier`.
-        :param python_specifier: Pre-filter of which python versions to consider. Setting a tight
-            filter can significantly speed up retrieval of Python versions. You must set `context`
-            xor `python_specifier`.
+        :param python_specifier: Allowed python versions.
+            You must set `context` xor `python_specifier`.
+        :param default_python: Which version of python to use when resolving requiremnts.
+            Can only be set when `python_specifier` is set.
+        :param context: Context to use. If `None` a default is created.
+            You must set `context` xor `python_specifier`.
         """
         assert (context is None) != (python_specifier is None), (
             "Must set exactly one of `context` and `python_specifier`."
             f" Found: {context=}, {python_specifier=}"
         )
+        if default_python is not None:
+            assert python_specifier is not None, (
+                "`default_python` can only be set when `python_specifier` is set."
+                f" Found: {python_specifier=}, {default_python=}"
+            )
         if context is None:
             assert python_specifier is not None, python_specifier
-            context = DefaultContext(python_specifier)
+            context = DefaultContext(python_specifier, default_python=default_python)
         assert context is not None
         self._context = context
+
+    def for_python(
+        self, python_specifier: AnySpecifierSet, *, default_python: AnyVersion | None = None
+    ) -> CompReq:
+        python_specifier = self.resolve_specifier_set("python", python_specifier)
+        assert isinstance(python_specifier, SpecifierSet)
+        if default_python is not None:
+            default_python = self.resolve_version("python", default_python)
+        assert (default_python is None) or isinstance(default_python, Version)
+
+        return CompReq(
+            context=self._context.for_python(
+                python_specifier=python_specifier, default_python=default_python
+            )
+        )
+
+    @property
+    def default_python(self) -> Version:
+        return self._context.default_python
+
+    @property
+    def python_specifier(self) -> SpecifierSet:
+        return self._context.python_specifier
 
     def resolve_release(self, package: str, release: AnyRelease) -> Release:
         context = self._context.for_package(package)

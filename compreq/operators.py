@@ -2,8 +2,7 @@
 
 import datetime as dt
 from dataclasses import dataclass, replace
-from itertools import chain
-from typing import Final, Iterable
+from typing import Final
 
 from dateutil.relativedelta import relativedelta
 from packaging.version import Version
@@ -33,6 +32,7 @@ from compreq.lazy import (
 )
 from compreq.levels import AnyLevel, IntLevel, Level, get_level
 from compreq.releases import Release, ReleaseSet
+from compreq.rounding import ceil, floor
 from compreq.time import UtcDatetime
 from compreq.versiontokens import VersionToken
 
@@ -275,30 +275,7 @@ class CeilLazyVersion(LazyVersion):
 
     def resolve(self, context: PackageContext) -> Version:
         version = self.version.resolve(context)
-        return self.ceil(self.level, version, self.keep_trailing_zeros)
-
-    @staticmethod
-    def ceil(level: Level, version: Version, keep_trailing_zeros: bool) -> Version:
-        """
-        Round a version up at a given level.
-
-        In practice this means incrementing the value at the given level, and removing all following
-        levels. For example::
-
-            CeilLazyVersion.ceil(MAJOR, Version("1.2.3"), False) == Version("2")
-            CeilLazyVersion.ceil(MINOR, Version("1.2.3"), False) == Version("1.3")
-
-        Set `keep_trailing_zeros` to `True` to keep the trailing elements::
-
-            CeilLazyVersion.ceil(MAJOR, Version("1.2.3"), True) == Version("2.0.0")
-            CeilLazyVersion.ceil(MINOR, Version("1.2.3"), True) == Version("1.3.0")
-        """
-        release = version.release
-        i = level.index(version)
-        ceil_release: Iterable[int] = chain(release[:i], [release[i] + 1])
-        if keep_trailing_zeros:
-            ceil_release = chain(ceil_release, (0 for _ in release[i + 1 :]))
-        return Version(f"{version.epoch}!" + ".".join(str(r) for r in ceil_release))
+        return ceil(self.level, version, self.keep_trailing_zeros)
 
 
 def ceil_ver(
@@ -333,29 +310,7 @@ class FloorLazyVersion(LazyVersion):
 
     def resolve(self, context: PackageContext) -> Version:
         version = self.version.resolve(context)
-        return self.floor(self.level, version, self.keep_trailing_zeros)
-
-    @staticmethod
-    def floor(level: Level, version: Version, keep_trailing_zeros: bool) -> Version:
-        """
-        Round a version down at a given level.
-
-        In practice this means removing all levels after the given one. For example::
-
-            FloorLazyVersion.floor(MAJOR, Version("1.2.3"), False) == Version("1")
-            FloorLazyVersion.floor(MINOR, Version("1.2.3"), False) == Version("1.2")
-
-        Set `keep_trailing_zeros` to `True` to keep the trailing elements::
-
-            FloorLazyVersion.floor(MAJOR, Version("1.2.3"), True) == Version("1.0.0")
-            FloorLazyVersion.floor(MINOR, Version("1.2.3"), True) == Version("1.2.0")
-        """
-        release = version.release
-        i = level.index(version)
-        floor_release: Iterable[int] = release[: i + 1]
-        if keep_trailing_zeros:
-            floor_release = chain(floor_release, (0 for _ in release[i + 1 :]))
-        return Version(f"{version.epoch}!" + ".".join(str(r) for r in floor_release))
+        return floor(self.level, version, self.keep_trailing_zeros)
 
 
 def floor_ver(
@@ -511,8 +466,7 @@ class CountLazyReleaseSet(LazyReleaseSet):
         release_set = self.release_set.resolve(context)
         fixed_level = IntLevel(self.level.index(max(release_set).version))
         unique_versions_at_level = {
-            FloorLazyVersion.floor(fixed_level, r.version, keep_trailing_zeros=False)
-            for r in release_set
+            floor(fixed_level, r.version, keep_trailing_zeros=False) for r in release_set
         }
         min_version = sorted(unique_versions_at_level, reverse=True)[: self.n][-1]
         result = frozenset(r for r in release_set if r.version >= min_version)
