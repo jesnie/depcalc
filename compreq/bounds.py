@@ -4,8 +4,8 @@ from typing import AbstractSet
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 
-import compreq.operators as o
 from compreq.levels import IntLevel
+from compreq.rounding import ceil
 
 
 @dataclass(order=True, frozen=True)
@@ -116,7 +116,7 @@ def get_bounds(specifier_set: SpecifierSet) -> Bounds:
                     upper = version
                     upper_inclusive = True
             case "~=":
-                vupper = o.CeilLazyVersion.ceil(IntLevel(-1), version, keep_trailing_zeros=False)
+                vupper = ceil(IntLevel(-1), version, keep_trailing_zeros=False)
                 if upper is None or vupper <= upper:
                     upper = vupper
                     upper_inclusive = False

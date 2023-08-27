@@ -10,9 +10,9 @@ from compreq.classifiers import set_python_classifiers
 from compreq.io.pyproject import PyprojectFile
 from compreq.lazy import AnyReleaseSet, AnyRequirementSet
 from compreq.levels import REL_MAJOR
-from compreq.operators import CeilLazyVersion
 from compreq.requirements import RequirementSet
 from compreq.roots import CompReq
+from compreq.rounding import ceil
 
 
 class PoetryPyprojectFile(PyprojectFile):
@@ -65,7 +65,7 @@ class PoetryPyprojectFile(PyprojectFile):
         for specifier in specifier_set.split(","):
             if specifier.startswith("^"):
                 version = Version(specifier[1:])
-                upper = CeilLazyVersion.ceil(REL_MAJOR, version, keep_trailing_zeros=True)
+                upper = ceil(REL_MAJOR, version, keep_trailing_zeros=True)
                 result &= SpecifierSet(f"<{upper},>={version}")
             elif specifier.startswith("~"):
                 result &= SpecifierSet(f"~={specifier[1:]}")
@@ -137,9 +137,11 @@ class PoetryPyprojectFile(PyprojectFile):
         toml.extend(classifiers)
         toml.multiline(True)
 
-    def set_python_classifiers(self, cr: CompReq, python_releases: AnyReleaseSet) -> None:
+    def set_python_classifiers(
+        self, cr: CompReq, python_releases: AnyReleaseSet | None = None
+    ) -> None:
         """
         Replace python package classifiers (https://pypi.org/classifiers/) with those corresponding
         to `python_releases`.
         """
-        self.set_classifiers(set_python_classifiers(cr, python_releases, self.get_classifiers()))
+        self.set_classifiers(set_python_classifiers(self.get_classifiers(), cr, python_releases))

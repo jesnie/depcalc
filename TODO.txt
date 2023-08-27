@@ -1,6 +1,8 @@
-* Faster Python release count?
+* Paralellise stuff.
+* Rename package->distribution
 * Support tensorflow_probability -> Python version.
 * Compute consistent lower bound?
+* python_specifier and default_python as operators? (Remove from root?)
 
 
 Alternatives:

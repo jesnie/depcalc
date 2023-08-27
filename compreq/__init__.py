@@ -106,6 +106,7 @@ from compreq.releases import (
 )
 from compreq.requirements import RequirementSet
 from compreq.roots import CompReq
+from compreq.rounding import ceil, floor
 from compreq.time import UtcDatetime, is_utc_datetime, utc_now
 from compreq.versiontokens import VersionToken
 
@@ -179,11 +180,13 @@ __all__ = [
     "UtcDatetime",
     "VersionToken",
     "__version__",
+    "ceil",
     "ceil_ver",
     "compose",
     "count",
     "devreleases",
     "extra",
+    "floor",
     "floor_ver",
     "get_bounds",
     "get_lazy_release",

@@ -34,8 +34,6 @@ def test_set_python_classifiers() -> None:
         "Programming Language :: Python :: 3.0",
         "Programming Language :: Python :: 3.1",
     ] == set_python_classifiers(
-        cr,
-        lazy_python_releases,
         [
             "Development Status :: 4 - Beta",
             "Intended Audience :: Developers",
@@ -44,5 +42,7 @@ def test_set_python_classifiers() -> None:
             "Programming Language :: Python :: 3.10",
             "Programming Language :: Python :: 3.11",
         ],
+        cr,
+        lazy_python_releases,
     )
     cr.resolve_release_set.assert_called_once_with("python", lazy_python_releases)
