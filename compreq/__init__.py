@@ -24,6 +24,7 @@ from compreq.lazy import (
     AnyVersion,
     EagerLazyRelease,
     EagerLazyReleaseSet,
+    EagerLazyRequirementSet,
     EagerLazyVersion,
     LazyRelease,
     LazyReleaseSet,
@@ -72,6 +73,7 @@ from compreq.operators import (
     MinimumLazyVersion,
     MinLazyRelease,
     ceil_ver,
+    consistent_lower_bounds,
     count,
     devreleases,
     extra,
@@ -87,6 +89,7 @@ from compreq.operators import (
     pkg,
     prereleases,
     releases,
+    requirements,
     specifier,
     specifier_set,
     url,
@@ -109,6 +112,13 @@ from compreq.roots import CompReq
 from compreq.rounding import ceil, floor
 from compreq.time import UtcDatetime, is_utc_datetime, utc_now
 from compreq.versiontokens import VersionToken
+from compreq.virtualenv import (
+    DistMetadata,
+    VirtualEnv,
+    create_venv,
+    remove_venv,
+    temp_venv,
+)
 
 __version__ = "0.1.0"
 
@@ -132,9 +142,11 @@ __all__ = [
     "CountLazyReleaseSet",
     "DefaultContext",
     "DefaultPackageContext",
+    "DistMetadata",
     "EMPTY_REQUIREMENT",
     "EagerLazyRelease",
     "EagerLazyReleaseSet",
+    "EagerLazyRequirementSet",
     "EagerLazyVersion",
     "FloorLazyVersion",
     "FtpDir",
@@ -179,11 +191,14 @@ __all__ = [
     "Url",
     "UtcDatetime",
     "VersionToken",
+    "VirtualEnv",
     "__version__",
     "ceil",
     "ceil_ver",
     "compose",
+    "consistent_lower_bounds",
     "count",
+    "create_venv",
     "devreleases",
     "extra",
     "floor",
@@ -216,9 +231,12 @@ __all__ = [
     "pkg",
     "prereleases",
     "releases",
+    "remove_venv",
+    "requirements",
     "set_python_classifiers",
     "specifier",
     "specifier_set",
+    "temp_venv",
     "url",
     "utc_now",
     "v",

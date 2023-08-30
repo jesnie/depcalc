@@ -1,30 +1,21 @@
 import datetime as dt
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Collection, Sequence
 from unittest.mock import MagicMock
 
 import pytest
+from packaging.requirements import Requirement
 from packaging.version import Version
+from pytest import MonkeyPatch
 
 import compreq as cr
-from compreq import (
-    AllLazyReleaseSet,
-    LazyRequirement,
-    LazySpecifierSet,
-    Level,
-    PackageContext,
-    PreLazyReleaseSet,
-    ProdLazyReleaseSet,
-    VersionToken,
-    get_lazy_specifier,
-    get_lazy_specifier_set,
-    get_marker,
-)
 from tests.utils import fake_release, fake_release_set, utc
 
 
 def test_version() -> None:
-    assert isinstance(cr.version, VersionToken)
-    assert isinstance(cr.v, VersionToken)
+    assert isinstance(cr.version, cr.VersionToken)
+    assert isinstance(cr.v, cr.VersionToken)
 
 
 @pytest.mark.parametrize(
@@ -32,81 +23,81 @@ def test_version() -> None:
     [
         (
             cr.package("foo.bar"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 package="foo.bar",
                 url=None,
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=cr.LazySpecifierSet(frozenset()),
                 marker=None,
             ),
         ),
         (
             cr.pkg("foo.bar"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 package="foo.bar",
                 url=None,
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=cr.LazySpecifierSet(frozenset()),
                 marker=None,
             ),
         ),
         (
             cr.url("http://path/v1.2.3"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 package=None,
                 url="http://path/v1.2.3",
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=cr.LazySpecifierSet(frozenset()),
                 marker=None,
             ),
         ),
         (
             cr.extra("extra"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 package=None,
                 url=None,
                 extras=frozenset(["extra"]),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=cr.LazySpecifierSet(frozenset()),
                 marker=None,
             ),
         ),
         (
             cr.specifier(">=1.2.3"),
-            get_lazy_specifier(">=1.2.3"),
+            cr.get_lazy_specifier(">=1.2.3"),
         ),
         (
             cr.specifier_set(">=1.2.3,<2.0.0"),
-            get_lazy_specifier_set(">=1.2.3,<2.0.0"),
+            cr.get_lazy_specifier_set(">=1.2.3,<2.0.0"),
         ),
         (
             cr.marker("python_version=='1.2.3'"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 package=None,
                 url=None,
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
-                marker=get_marker("python_version=='1.2.3'"),
+                specifier=cr.LazySpecifierSet(frozenset()),
+                marker=cr.get_marker("python_version=='1.2.3'"),
             ),
         ),
     ],
 )
-def test_factories(requirement: LazyRequirement, expected: LazyRequirement) -> None:
+def test_factories(requirement: cr.LazyRequirement, expected: cr.LazyRequirement) -> None:
     assert requirement == expected
 
 
 def test_releases() -> None:
-    assert ProdLazyReleaseSet(AllLazyReleaseSet(None)) == cr.releases()
-    assert ProdLazyReleaseSet(AllLazyReleaseSet("foo.bar")) == cr.releases("foo.bar")
+    assert cr.ProdLazyReleaseSet(cr.AllLazyReleaseSet(None)) == cr.releases()
+    assert cr.ProdLazyReleaseSet(cr.AllLazyReleaseSet("foo.bar")) == cr.releases("foo.bar")
 
 
 def test_prereleases() -> None:
-    assert PreLazyReleaseSet(AllLazyReleaseSet(None)) == cr.prereleases()
-    assert PreLazyReleaseSet(AllLazyReleaseSet("foo.bar")) == cr.prereleases("foo.bar")
+    assert cr.PreLazyReleaseSet(cr.AllLazyReleaseSet(None)) == cr.prereleases()
+    assert cr.PreLazyReleaseSet(cr.AllLazyReleaseSet("foo.bar")) == cr.prereleases("foo.bar")
 
 
 def test_devreleases() -> None:
-    assert AllLazyReleaseSet(None) == cr.devreleases()
-    assert AllLazyReleaseSet("foo.bar") == cr.devreleases("foo.bar")
+    assert cr.AllLazyReleaseSet(None) == cr.devreleases()
+    assert cr.AllLazyReleaseSet("foo.bar") == cr.devreleases("foo.bar")
 
 
 @pytest.mark.parametrize(
@@ -121,9 +112,10 @@ def test_devreleases() -> None:
 )
 def test_min_ver(releases: Collection[str], expected: str) -> None:
     release_set = fake_release_set(releases=releases, infer_successors=False)
-    context = MagicMock(PackageContext)
+    context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     min_ver = cr.min_ver(release_set)
+    assert "foo.bar" == min_ver.get_package()
     assert fake_release(version=expected) == min_ver.resolve(context)
     assert context.releases.called_once_with("foo.bar")
 
@@ -140,9 +132,10 @@ def test_min_ver(releases: Collection[str], expected: str) -> None:
 )
 def test_max_ver(releases: Collection[str], expected: str) -> None:
     release_set = fake_release_set(releases=releases, infer_successors=False)
-    context = MagicMock(PackageContext)
+    context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     max_ver = cr.max_ver(release_set)
+    assert "foo.bar" == max_ver.get_package()
     assert fake_release(version=expected) == max_ver.resolve(context)
     assert context.releases.called_once_with("foo.bar")
 
@@ -156,7 +149,7 @@ def test_max_ver(releases: Collection[str], expected: str) -> None:
     ],
 )
 def test_minimum_ver(versions: Sequence[str], expected: str) -> None:
-    context = MagicMock(PackageContext)
+    context = MagicMock(cr.PackageContext)
     lazy = cr.minimum_ver(*versions)
     assert Version(expected) == lazy.resolve(context)
 
@@ -170,7 +163,7 @@ def test_minimum_ver(versions: Sequence[str], expected: str) -> None:
     ],
 )
 def test_maximum_ver(versions: Sequence[str], expected: str) -> None:
-    context = MagicMock(PackageContext)
+    context = MagicMock(cr.PackageContext)
     lazy = cr.maximum_ver(*versions)
     assert Version(expected) == lazy.resolve(context)
 
@@ -212,8 +205,8 @@ def test_maximum_ver(versions: Sequence[str], expected: str) -> None:
         (cr.MAJOR, "1!0.1.0", False, "1!1"),
     ],
 )
-def test_ceil_ver(level: Level, version: str, keep_trailing_zeros: bool, expected: str) -> None:
-    context = MagicMock(PackageContext)
+def test_ceil_ver(level: cr.Level, version: str, keep_trailing_zeros: bool, expected: str) -> None:
+    context = MagicMock(cr.PackageContext)
     ceil_ver = cr.ceil_ver(level, version, keep_trailing_zeros)
     assert Version(expected) == ceil_ver.resolve(context)
 
@@ -255,14 +248,14 @@ def test_ceil_ver(level: Level, version: str, keep_trailing_zeros: bool, expecte
         (cr.MAJOR, "1!0.1.0", False, "1!0"),
     ],
 )
-def test_floor_ver(level: Level, version: str, keep_trailing_zeros: bool, expected: str) -> None:
-    context = MagicMock(PackageContext)
+def test_floor_ver(level: cr.Level, version: str, keep_trailing_zeros: bool, expected: str) -> None:
+    context = MagicMock(cr.PackageContext)
     floor_ver = cr.floor_ver(level, version, keep_trailing_zeros)
     assert Version(expected) == floor_ver.resolve(context)
 
 
 def test_min_age() -> None:
-    context = MagicMock(PackageContext)
+    context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     release_set = fake_release_set(
         releases=[
@@ -278,6 +271,7 @@ def test_min_age() -> None:
     min_age = cr.min_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 5, 0)), minutes=3, allow_empty=True
     )
+    assert "foo.bar" == min_age.get_package()
     assert fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -289,7 +283,7 @@ def test_min_age() -> None:
 
 
 def test_min_age__context_now() -> None:
-    context = MagicMock(PackageContext)
+    context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     context.now = utc(dt.datetime(2023, 8, 16, 16, 5, 0))
 
@@ -305,6 +299,7 @@ def test_min_age__context_now() -> None:
     )
 
     min_age = cr.min_age(release_set, minutes=3, allow_empty=True)
+    assert "foo.bar" == min_age.get_package()
     assert fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -316,7 +311,7 @@ def test_min_age__context_now() -> None:
 
 
 def test_min_age__empty_allowed() -> None:
-    context = MagicMock(PackageContext)
+    context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     release_set = fake_release_set(
         releases=[
@@ -331,6 +326,7 @@ def test_min_age__empty_allowed() -> None:
     min_age = cr.min_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 5, 0)), minutes=6, allow_empty=True
     )
+    assert "foo.bar" == min_age.get_package()
     assert fake_release_set(
         releases=[],
         infer_successors=False,
@@ -338,7 +334,7 @@ def test_min_age__empty_allowed() -> None:
 
 
 def test_min_age__empty_not_allowed() -> None:
-    context = MagicMock(PackageContext)
+    context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     release_set = fake_release_set(
         releases=[
@@ -353,6 +349,7 @@ def test_min_age__empty_not_allowed() -> None:
     min_age = cr.min_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 5, 0)), minutes=6, allow_empty=False
     )
+    assert "foo.bar" == min_age.get_package()
     assert fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -362,7 +359,7 @@ def test_min_age__empty_not_allowed() -> None:
 
 
 def test_max_age() -> None:
-    context = MagicMock(PackageContext)
+    context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     release_set = fake_release_set(
         releases=[
@@ -377,6 +374,7 @@ def test_max_age() -> None:
     max_age = cr.max_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 5, 0)), minutes=3, allow_empty=True
     )
+    assert "foo.bar" == max_age.get_package()
     assert fake_release_set(
         releases=[
             fake_release(version="1.0.2", released_time=dt.datetime(2023, 8, 16, 16, 2, 0)),
@@ -388,7 +386,7 @@ def test_max_age() -> None:
 
 
 def test_max_age__context_now() -> None:
-    context = MagicMock(PackageContext)
+    context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     context.now = utc(dt.datetime(2023, 8, 16, 16, 5, 0))
     release_set = fake_release_set(
@@ -402,6 +400,7 @@ def test_max_age__context_now() -> None:
         infer_successors=False,
     )
     max_age = cr.max_age(release_set, minutes=3, allow_empty=True)
+    assert "foo.bar" == max_age.get_package()
     assert fake_release_set(
         releases=[
             fake_release(version="1.0.2", released_time=dt.datetime(2023, 8, 16, 16, 2, 0)),
@@ -413,7 +412,7 @@ def test_max_age__context_now() -> None:
 
 
 def test_max_age__empty_allowed() -> None:
-    context = MagicMock(PackageContext)
+    context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     release_set = fake_release_set(
         releases=[
@@ -428,6 +427,7 @@ def test_max_age__empty_allowed() -> None:
     max_age = cr.max_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 10, 0)), minutes=3, allow_empty=True
     )
+    assert "foo.bar" == max_age.get_package()
     assert fake_release_set(
         releases=[],
         infer_successors=False,
@@ -435,7 +435,7 @@ def test_max_age__empty_allowed() -> None:
 
 
 def test_max_age__empty_not_allowed() -> None:
-    context = MagicMock(PackageContext)
+    context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     release_set = fake_release_set(
         releases=[
@@ -450,6 +450,7 @@ def test_max_age__empty_not_allowed() -> None:
     max_age = cr.max_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 10, 0)), minutes=3, allow_empty=False
     )
+    assert "foo.bar" == max_age.get_package()
     assert fake_release_set(
         releases=[
             fake_release(version="1.0.4", released_time=dt.datetime(2023, 8, 16, 16, 4, 0)),
@@ -544,10 +545,156 @@ def test_max_age__empty_not_allowed() -> None:
         ),
     ],
 )
-def test_count(level: Level, n: int, releases: Collection[str], expected: Collection[str]) -> None:
+def test_count(
+    level: cr.Level, n: int, releases: Collection[str], expected: Collection[str]
+) -> None:
     release_set = fake_release_set(releases=releases, infer_successors=False)
-    context = MagicMock(PackageContext)
+    context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     count = cr.count(level, n, release_set)
 
+    assert "foo.bar" == count.get_package()
     assert fake_release_set(releases=expected, infer_successors=False) == count.resolve(context)
+
+
+def test_requirements(monkeypatch: MonkeyPatch) -> None:
+    context = MagicMock(cr.Context)
+    context.default_python = Version("3.9")
+    pcontext = MagicMock(cr.PackageContext)
+    pcontext.package = "foo.bar"
+    context.for_package.return_value = pcontext
+    release = fake_release(version="1.2.3")
+
+    requirements = cr.RequirementSet.new([Requirement("foo>=1.0.0"), Requirement("bar>=2.0.0")])
+    metadata = MagicMock(cr.DistMetadata)
+    metadata.requires = requirements
+
+    venv = MagicMock(cr.VirtualEnv)
+    venv.package_metadata.return_value = metadata
+
+    @contextmanager
+    def fake_venv(python_version: Version) -> Iterator[cr.VirtualEnv]:
+        assert context.default_python == python_version
+        yield venv
+
+    monkeypatch.setattr("compreq.operators.temp_venv", fake_venv)
+
+    lazy = cr.requirements(release)
+
+    assert requirements == lazy.resolve(context)
+    context.for_package.assert_called_once_with("foo.bar")
+    venv.install.assert_called_once_with(
+        cr.RequirementSet.new([Requirement("foo.bar==1.2.3")]), deps=False
+    )
+    venv.package_metadata.assert_called_once_with("foo.bar")
+
+
+def test_consistent_lower_bounds(monkeypatch: MonkeyPatch) -> None:
+    context = MagicMock(cr.Context)
+
+    requirement_set = cr.RequirementSet.new(
+        [
+            Requirement("python<4.0,>=3.9"),
+            Requirement("dist1<2.0.0,>=1.2.3; python_version >= '3.10'"),
+            Requirement("dist2[extra]>=2.0.0,!=2.1.1"),
+            Requirement("dist3>1.0.0"),
+            Requirement("dist4"),
+        ]
+    )
+
+    def fake_package_metadata(package: str) -> cr.DistMetadata:
+        metadata = MagicMock(cr.DistMetadata)
+        metadata.version = Version(
+            {
+                "dist1": "1.2.0",
+                "dist2": "1.12.0",
+            }[package]
+        )
+        return metadata
+
+    venv = MagicMock(cr.VirtualEnv)
+    venv.package_metadata.side_effect = fake_package_metadata
+
+    @contextmanager
+    def fake_venv(python_version: Version) -> Iterator[cr.VirtualEnv]:
+        assert Version("3.9") == python_version
+        yield venv
+
+    monkeypatch.setattr("compreq.operators.temp_venv", fake_venv)
+
+    lazy = cr.consistent_lower_bounds(requirement_set)
+
+    assert cr.RequirementSet.new(
+        [
+            Requirement("python<4.0,>=3.9"),
+            Requirement("dist1<2.0.0,>=1.2.0; python_version >= '3.10'"),
+            Requirement("dist2[extra]>=1.12.0,!=2.1.1"),
+            Requirement("dist3>1.0.0"),
+            Requirement("dist4"),
+        ]
+    ) == lazy.resolve(context)
+    venv.install.assert_called_once_with(
+        cr.RequirementSet.new(
+            [
+                Requirement("dist1<=1.2.3"),
+                Requirement("dist2[extra]<=2.0.0,!=2.1.1"),
+                Requirement("dist3>1.0.0"),
+                Requirement("dist4"),
+            ]
+        )
+    )
+
+
+def test_consistent_lower_bounds__no_python(monkeypatch: MonkeyPatch) -> None:
+    context = MagicMock(cr.Context)
+    context.default_python = Version("3.9")
+
+    requirement_set = cr.RequirementSet.new(
+        [
+            Requirement("dist1<2.0.0,>=1.2.3; python_version >= '3.10'"),
+            Requirement("dist2[extra]>=2.0.0,!=2.1.1"),
+            Requirement("dist3>1.0.0"),
+            Requirement("dist4"),
+        ]
+    )
+
+    def fake_package_metadata(package: str) -> cr.DistMetadata:
+        metadata = MagicMock(cr.DistMetadata)
+        metadata.version = Version(
+            {
+                "dist1": "1.2.0",
+                "dist2": "1.12.0",
+            }[package]
+        )
+        return metadata
+
+    venv = MagicMock(cr.VirtualEnv)
+    venv.package_metadata.side_effect = fake_package_metadata
+
+    @contextmanager
+    def fake_venv(python_version: Version) -> Iterator[cr.VirtualEnv]:
+        assert context.default_python == python_version
+        yield venv
+
+    monkeypatch.setattr("compreq.operators.temp_venv", fake_venv)
+
+    lazy = cr.consistent_lower_bounds(requirement_set)
+
+    assert cr.RequirementSet.new(
+        [
+            Requirement("dist1<2.0.0,>=1.2.0; python_version >= '3.10'"),
+            Requirement("dist2[extra]>=1.12.0,!=2.1.1"),
+            Requirement("dist3>1.0.0"),
+            Requirement("dist4"),
+        ]
+    ) == lazy.resolve(context)
+    venv.install.assert_called_once_with(
+        cr.RequirementSet.new(
+            [
+                Requirement("dist1<=1.2.3"),
+                Requirement("dist2[extra]<=2.0.0,!=2.1.1"),
+                Requirement("dist3>1.0.0"),
+                Requirement("dist4"),
+            ]
+        )
+    )

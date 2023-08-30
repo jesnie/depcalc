@@ -22,6 +22,7 @@ from compreq import (
     Context,
     EagerLazyRelease,
     EagerLazyReleaseSet,
+    EagerLazyRequirementSet,
     EagerLazyVersion,
     LazyRelease,
     LazyReleaseSet,
@@ -56,6 +57,7 @@ def test_eager_lazy_release() -> None:
     lazy = EagerLazyRelease(release)
 
     context = MagicMock(PackageContext)
+    assert "foo.bar" == lazy.get_package()
     assert release == lazy.resolve(context)
 
 
@@ -81,6 +83,7 @@ def test_eager_lazy_release_set__empty() -> None:
     context = MagicMock(PackageContext)
     context.package = "foo.bar"
 
+    assert lazy.get_package() is None
     assert ReleaseSet("foo.bar", frozenset()) == lazy.resolve(context)
 
 
@@ -94,6 +97,7 @@ def test_eager_lazy_release_set() -> None:
     context = MagicMock(PackageContext)
     context.package = "foo.bar"
 
+    assert "foo.bar" == lazy.get_package()
     assert ReleaseSet("foo.bar", frozenset([release_1, release_2])) == lazy.resolve(context)
 
 
@@ -107,6 +111,7 @@ def test_all_lazy_release_set() -> None:
     context.package = "foo.bar"
     context.releases.return_value = releases
 
+    assert lazy.get_package() is None
     assert fake_release_set(
         releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
     ) == lazy.resolve(context)
@@ -123,6 +128,7 @@ def test_all_lazy_release_set__package() -> None:
     context.package = "foo.bar"
     context.releases.return_value = releases
 
+    assert "foo" == lazy.get_package()
     assert (
         releases
         == fake_release_set(
@@ -138,11 +144,13 @@ def test_prod_lazy_release_set() -> None:
         releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
     )
     source = MagicMock(LazyReleaseSet)
+    source.get_package.return_value = "foo"
     source.resolve.return_value = releases
     context = MagicMock(PackageContext)
 
     lazy = ProdLazyReleaseSet(source)
 
+    assert "foo" == lazy.get_package()
     assert fake_release_set(releases=["1.2.0", "1.3.0"]) == lazy.resolve(context)
     source.resolve.assert_called_once_with(context)
 
@@ -152,11 +160,13 @@ def test_pre_lazy_release_set() -> None:
         releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
     )
     source = MagicMock(LazyReleaseSet)
+    source.get_package.return_value = "foo"
     source.resolve.return_value = releases
     context = MagicMock(PackageContext)
 
     lazy = PreLazyReleaseSet(source)
 
+    assert "foo" == lazy.get_package()
     assert fake_release_set(releases=["1.2.0", "1.3.0.rc1", "1.3.0"]) == lazy.resolve(context)
     source.resolve.assert_called_once_with(context)
 
@@ -167,11 +177,13 @@ def test_specifier_lazy_release_set() -> None:
         infer_successors=False,
     )
     source = MagicMock(LazyReleaseSet)
+    source.get_package.return_value = "foo"
     source.resolve.return_value = releases
     context = MagicMock(PackageContext)
 
     lazy = SpecifierLazyReleaseSet(source, get_lazy_specifier_set(">=1.3.0,<2.0.0"))
 
+    assert "foo" == lazy.get_package()
     assert fake_release_set(
         releases=["1.3.0", "1.3.1", "1.4.0"],
         infer_successors=False,
@@ -1015,7 +1027,7 @@ def test_compose(
     [
         (
             "foo.bar",
-            LazyRequirementSet(
+            EagerLazyRequirementSet(
                 frozenset(
                     [
                         LazyRequirement(
@@ -1031,7 +1043,7 @@ def test_compose(
         ),
         (
             "foo.bar==1.1.0",
-            LazyRequirementSet(
+            EagerLazyRequirementSet(
                 frozenset(
                     [
                         LazyRequirement(
@@ -1047,7 +1059,7 @@ def test_compose(
         ),
         (
             Specifier("==1.2.0"),
-            LazyRequirementSet(
+            EagerLazyRequirementSet(
                 frozenset(
                     [
                         LazyRequirement(
@@ -1063,7 +1075,7 @@ def test_compose(
         ),
         (
             get_lazy_specifier("==1.3.0"),
-            LazyRequirementSet(
+            EagerLazyRequirementSet(
                 frozenset(
                     [
                         LazyRequirement(
@@ -1079,7 +1091,7 @@ def test_compose(
         ),
         (
             SpecifierSet(">=1.4.0,<2.0.0"),
-            LazyRequirementSet(
+            EagerLazyRequirementSet(
                 frozenset(
                     [
                         LazyRequirement(
@@ -1095,7 +1107,7 @@ def test_compose(
         ),
         (
             get_lazy_specifier_set(">=1.4.0,<2.0.0"),
-            LazyRequirementSet(
+            EagerLazyRequirementSet(
                 frozenset(
                     [
                         LazyRequirement(
@@ -1111,7 +1123,7 @@ def test_compose(
         ),
         (
             Requirement("foo.bar[extra]==1.5.0; python_version > '2.0.0'"),
-            LazyRequirementSet(
+            EagerLazyRequirementSet(
                 frozenset(
                     [
                         LazyRequirement(
@@ -1133,7 +1145,7 @@ def test_compose(
                 specifier=get_lazy_specifier_set("==1.7.0"),
                 marker=Marker("python_version > '2.0.0'"),
             ),
-            LazyRequirementSet(
+            EagerLazyRequirementSet(
                 frozenset(
                     [
                         LazyRequirement(
@@ -1152,7 +1164,7 @@ def test_compose(
                 Requirement("foo>=1.2.3"),
                 Requirement("bar==2.0.0"),
             ],
-            LazyRequirementSet(
+            EagerLazyRequirementSet(
                 frozenset(
                     [
                         LazyRequirement(
@@ -1178,7 +1190,7 @@ def test_compose(
                 "foo": Requirement("foo>=1.2.3"),
                 "bar": Requirement("bar==2.0.0"),
             },
-            LazyRequirementSet(
+            EagerLazyRequirementSet(
                 frozenset(
                     [
                         LazyRequirement(
@@ -1206,7 +1218,7 @@ def test_compose(
                     Requirement("bar==2.0.0"),
                 ],
             ),
-            LazyRequirementSet(
+            EagerLazyRequirementSet(
                 frozenset(
                     [
                         LazyRequirement(
@@ -1228,7 +1240,7 @@ def test_compose(
             ),
         ),
         (
-            LazyRequirementSet(
+            EagerLazyRequirementSet(
                 frozenset(
                     [
                         LazyRequirement(
@@ -1248,7 +1260,7 @@ def test_compose(
                     ]
                 ),
             ),
-            LazyRequirementSet(
+            EagerLazyRequirementSet(
                 frozenset(
                     [
                         LazyRequirement(

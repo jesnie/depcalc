@@ -60,16 +60,19 @@ def main() -> None:
 
         pyproject.set_requirements(
             comp_req,
-            [
-                cr.pkg("beautifulsoup4") & default_range,
-                cr.pkg("packaging") & default_range,
-                cr.pkg("pip") & default_range,
-                cr.pkg("python") & comp_req.python_specifier,
-                cr.pkg("python-dateutil") & default_range,
-                cr.pkg("requests") & default_range,
-                cr.pkg("tomlkit") & default_range,
-                cr.pkg("typing-extensions") & default_range,
-            ],
+            cr.consistent_lower_bounds(
+                [
+                    cr.pkg("beautifulsoup4") & default_range,
+                    cr.pkg("packaging") & default_range,
+                    cr.pkg("pip") & default_range,
+                    cr.pkg("python") & comp_req.python_specifier,
+                    cr.pkg("python-dateutil") & default_range,
+                    cr.pkg("requests") & default_range,
+                    cr.pkg("tomlkit") & default_range,
+                    cr.pkg("typing-extensions") & default_range,
+                    cr.pkg("virtualenv") & default_range,
+                ],
+            ),
         )
         pyproject.set_requirements(
             comp_req,

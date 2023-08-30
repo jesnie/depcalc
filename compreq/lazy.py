@@ -21,6 +21,14 @@ class LazyRelease(ABC):
     """Strategy for computing a `Release` in the context of a package."""
 
     @abstractmethod
+    def get_package(self) -> str | None:
+        """
+        Return the package of this `LazyRelease`, if possible.
+
+        Returns `None` if the package cannot be determined without resolving the `LazyRelease`.
+        """
+
+    @abstractmethod
     def resolve(self, context: PackageContext) -> Release:
         """Compute the `Release`."""
 
@@ -30,6 +38,9 @@ class EagerLazyRelease(LazyRelease):
     """`LazyRelease` that returns a given constant value."""
 
     release: Release
+
+    def get_package(self) -> str | None:
+        return self.release.package
 
     def resolve(self, context: PackageContext) -> Release:
         return self.release
@@ -52,6 +63,14 @@ class LazyReleaseSet(ABC):
     """Strategy for computing a `ReleaseSet` in the context of a package."""
 
     @abstractmethod
+    def get_package(self) -> str | None:
+        """
+        Return the package of this `LazyReleaseSet`, if possible.
+
+        Returns `None` if the package cannot be determined without resolving the `LazyReleaseSet`.
+        """
+
+    @abstractmethod
     def resolve(self, context: PackageContext) -> ReleaseSet:
         """Compute the `ReleaseSet`."""
 
@@ -61,6 +80,13 @@ class EagerLazyReleaseSet(LazyReleaseSet):
     """`LazyReleaseSet` that returns a given constant set of (lazy) releases."""
 
     releases: frozenset[LazyRelease]
+
+    def get_package(self) -> str | None:
+        packages = {r.get_package() for r in self.releases}
+        if not packages:
+            return None
+        (package,) = packages
+        return package
 
     def resolve(self, context: PackageContext) -> ReleaseSet:
         return ReleaseSet(
@@ -78,6 +104,9 @@ class AllLazyReleaseSet(LazyReleaseSet):
     The package to get releases from. If `None`, the package of the context is used.
     """
 
+    def get_package(self) -> str | None:
+        return self.package
+
     def resolve(self, context: PackageContext) -> ReleaseSet:
         package = self.package or context.package
         return context.releases(package)
@@ -91,6 +120,9 @@ class ProdLazyReleaseSet(LazyReleaseSet):
     """
 
     source: LazyReleaseSet
+
+    def get_package(self) -> str | None:
+        return self.source.get_package()
 
     def resolve(self, context: PackageContext) -> ReleaseSet:
         release_set = self.source.resolve(context)
@@ -111,6 +143,9 @@ class PreLazyReleaseSet(LazyReleaseSet):
 
     source: LazyReleaseSet
 
+    def get_package(self) -> str | None:
+        return self.source.get_package()
+
     def resolve(self, context: PackageContext) -> ReleaseSet:
         release_set = self.source.resolve(context)
         return ReleaseSet(
@@ -127,6 +162,9 @@ class SpecifierLazyReleaseSet(LazyReleaseSet):
 
     source: LazyReleaseSet
     specifier_set: LazySpecifierSet
+
+    def get_package(self) -> str | None:
+        return self.source.get_package()
 
     def resolve(self, context: PackageContext) -> ReleaseSet:
         release_set = self.source.resolve(context)
@@ -603,16 +641,23 @@ def compose(lhs: AnyRequirement, rhs: AnyRequirement) -> LazySpecifierSet | Lazy
         return LazySpecifierSet(frozenset(chain(lhss.specifiers, rhss.specifiers)))
 
 
-@dataclass(order=True, frozen=True)
-class LazyRequirementSet:
+class LazyRequirementSet(ABC):
     """
     Strategy for computing a `RequirementSet` in a context.
     """
 
+    @abstractmethod
+    def resolve(self, context: Context) -> RequirementSet:
+        """Compute the `RequirementSet`."""
+
+
+@dataclass(order=True, frozen=True)
+class EagerLazyRequirementSet(LazyRequirementSet):
+    """`LazyRequirementSet` that returns a given constant value."""
+
     requirements: frozenset[LazyRequirement]
 
     def resolve(self, context: Context) -> RequirementSet:
-        """Compute the `RequirementSet`."""
         return RequirementSet.new(r.resolve(context) for r in self.requirements)
 
 
@@ -640,11 +685,11 @@ def get_lazy_requirement_set(requirement_set: AnyRequirementSet) -> LazyRequirem
     ):
         requirement_set = get_lazy_requirement(requirement_set)
     if isinstance(requirement_set, LazyRequirement):
-        requirement_set = LazyRequirementSet(frozenset([requirement_set]))
+        requirement_set = EagerLazyRequirementSet(frozenset([requirement_set]))
     if isinstance(requirement_set, Mapping):
         requirement_set = requirement_set.values()
     if isinstance(requirement_set, Iterable):
-        requirement_set = LazyRequirementSet(
+        requirement_set = EagerLazyRequirementSet(
             frozenset(get_lazy_requirement(r) for r in requirement_set)
         )
     if isinstance(requirement_set, LazyRequirementSet):

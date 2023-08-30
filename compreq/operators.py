@@ -5,26 +5,33 @@ from dataclasses import dataclass, replace
 from typing import Final
 
 from dateutil.relativedelta import relativedelta
+from packaging.requirements import Requirement
+from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 
-from compreq.contexts import PackageContext
+from compreq.bounds import get_bounds
+from compreq.contexts import Context, PackageContext
+from compreq.factory import make_requirement
 from compreq.lazy import (
     EMPTY_REQUIREMENT,
     AllLazyReleaseSet,
     AnyMarker,
     AnyReleaseSet,
+    AnyRequirementSet,
     AnySpecifier,
     AnySpecifierSet,
     AnyVersion,
     LazyRelease,
     LazyReleaseSet,
     LazyRequirement,
+    LazyRequirementSet,
     LazySpecifier,
     LazySpecifierSet,
     LazyVersion,
     PreLazyReleaseSet,
     ProdLazyReleaseSet,
     get_lazy_release_set,
+    get_lazy_requirement_set,
     get_lazy_specifier,
     get_lazy_specifier_set,
     get_lazy_version,
@@ -32,9 +39,11 @@ from compreq.lazy import (
 )
 from compreq.levels import AnyLevel, IntLevel, Level, get_level
 from compreq.releases import Release, ReleaseSet
+from compreq.requirements import RequirementSet
 from compreq.rounding import ceil, floor
 from compreq.time import UtcDatetime
 from compreq.versiontokens import VersionToken
+from compreq.virtualenv import temp_venv
 
 version: Final[VersionToken] = VersionToken()
 """
@@ -167,6 +176,9 @@ class MinLazyRelease(LazyRelease):
 
     release_set: LazyReleaseSet
 
+    def get_package(self) -> str | None:
+        return self.release_set.get_package()
+
     def resolve(self, context: PackageContext) -> Release:
         release_set = self.release_set.resolve(context)
         return min(release_set)
@@ -193,6 +205,9 @@ class MaxLazyRelease(LazyRelease):
     """
 
     release_set: LazyReleaseSet
+
+    def get_package(self) -> str | None:
+        return self.release_set.get_package()
 
     def resolve(self, context: PackageContext) -> Release:
         release_set = self.release_set.resolve(context)
@@ -341,6 +356,9 @@ class MinAgeLazyReleaseSet(LazyReleaseSet):
     allow_empty: bool
     release_set: LazyReleaseSet
 
+    def get_package(self) -> str | None:
+        return self.release_set.get_package()
+
     def resolve(self, context: PackageContext) -> ReleaseSet:
         release_set = self.release_set.resolve(context)
 
@@ -402,6 +420,9 @@ class MaxAgeLazyReleaseSet(LazyReleaseSet):
     allow_empty: bool
     release_set: LazyReleaseSet
 
+    def get_package(self) -> str | None:
+        return self.release_set.get_package()
+
     def resolve(self, context: PackageContext) -> ReleaseSet:
         release_set = self.release_set.resolve(context)
 
@@ -462,6 +483,9 @@ class CountLazyReleaseSet(LazyReleaseSet):
     n: int
     release_set: LazyReleaseSet
 
+    def get_package(self) -> str | None:
+        return self.release_set.get_package()
+
     def resolve(self, context: PackageContext) -> ReleaseSet:
         release_set = self.release_set.resolve(context)
         fixed_level = IntLevel(self.level.index(max(release_set).version))
@@ -489,3 +513,127 @@ def count(
         package in the context is used.
     """
     return CountLazyReleaseSet(get_level(level), n, get_lazy_release_set(release_set))
+
+
+@dataclass(order=True, frozen=True)
+class RequirementsLazyRequirementSet(LazyRequirementSet):
+    """
+    Get all the requirements of a release.
+    """
+
+    package: str
+    """
+    The package to get requiremts of.
+    """
+
+    release: LazyReleaseSet
+    """
+    Release to get requirements of.
+
+    This must resolve to exactly one actual release.
+    """
+
+    def resolve(self, context: Context) -> RequirementSet:
+        python_version = context.default_python
+        pcontext = context.for_package(self.package)
+        releases = self.release.resolve(pcontext)
+        assert len(releases) == 1, releases
+        (release,) = releases.releases
+        requirement = Requirement(f"{release.package}=={release.version}")
+        requirement_set = RequirementSet.new([requirement])
+
+        with temp_venv(python_version) as venv:
+            venv.install(requirement_set, deps=False)
+            return venv.package_metadata(release.package).requires
+
+
+def requirements(release_set: AnyReleaseSet, package: str | None = None) -> LazyRequirementSet:
+    """
+    Returns the requirments of the given release.
+
+    If the package cannot be derived from the `release` directly, you must set `package`.
+    """
+    lazy = get_lazy_release_set(release_set)
+    if package is None:
+        package = lazy.get_package()
+    assert package is not None, release_set
+    return RequirementsLazyRequirementSet(package, lazy)
+
+
+@dataclass(order=True, frozen=True)
+class ConsistentLowerBoundsLazyRequirementSet(LazyRequirementSet):
+    """
+    Loosens lower bounds, to make them consistent.
+    """
+
+    requirement_set: LazyRequirementSet
+
+    def resolve(self, context: Context) -> RequirementSet:
+        requirement_set = self.requirement_set.resolve(context)
+        bounds = {}
+        result = []
+        upper_bounds = []
+        python: Requirement | None = None
+        for requirement in requirement_set.values():
+            package = requirement.name
+            if package == "python":
+                python = requirement
+            elif requirement.specifier:
+                b = get_bounds(requirement.specifier)
+                bounds[package] = b
+                if b.lower and b.lower_inclusive:
+                    upper_bounds.append(
+                        make_requirement(
+                            requirement,
+                            specifier=SpecifierSet(f"<={b.lower}") & b.exclusions_specifier_set(),
+                            marker=None,
+                        )
+                    )
+                else:
+                    result.append(requirement)
+            else:
+                result.append(requirement)
+
+        if python:
+            b = get_bounds(python.specifier)
+            assert b.lower and b.lower_inclusive, python
+            python_version = b.lower
+        else:
+            python_version = context.default_python
+
+        with temp_venv(python_version) as venv:
+            venv.install(RequirementSet.new(result + upper_bounds))
+
+            for ub in upper_bounds:
+                package = ub.name
+                b = bounds[package]
+                assert b.lower, b
+                version = venv.package_metadata(package).version
+                assert b.lower >= version, (b, version)
+                specifiers = replace(b, lower=version).minimal_specifier_set()
+                result.append(make_requirement(requirement_set[package], specifier=specifiers))
+
+        if python:
+            result.append(python)
+
+        return RequirementSet.new(result)
+
+
+def consistent_lower_bounds(requirement_set: AnyRequirementSet) -> LazyRequirementSet:
+    """
+    Loosens lower bounds, to make them consistent.
+
+    For example: Assume you depend on two packages: foo and bar, with these releases:
+
+    * `foo 1.0.0`
+    * `foo 1.1.0`
+    * `foo 1.2.0`
+    * `bar 2.1.0`, requires `foo<1.1.0,>=1.0.0`
+    * `bar 2.2.0`, requires `foo<1.2.0,>=1.1.0`
+
+    You depend on `foo>=1.1.0` and `bar>=2.1.0`. While this constraint can be satisfied by `foo
+    1.1.0` and `bar 2.2.0`, your lower bounds does not actually make sense, as there is no way you
+    can install `bar 2.1.0`. This function would relax your lower bounds to `foo>=1.0.0` and
+    `bar>=2.1.0`.
+    """
+    return ConsistentLowerBoundsLazyRequirementSet(get_lazy_requirement_set(requirement_set))
