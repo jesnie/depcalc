@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
@@ -29,7 +30,7 @@ class LazyRelease(ABC):
         """
 
     @abstractmethod
-    def resolve(self, context: PackageContext) -> Release:
+    async def resolve(self, context: PackageContext) -> Release:
         """Compute the `Release`."""
 
 
@@ -42,7 +43,7 @@ class EagerLazyRelease(LazyRelease):
     def get_package(self) -> str | None:
         return self.release.package
 
-    def resolve(self, context: PackageContext) -> Release:
+    async def resolve(self, context: PackageContext) -> Release:
         return self.release
 
 
@@ -71,7 +72,7 @@ class LazyReleaseSet(ABC):
         """
 
     @abstractmethod
-    def resolve(self, context: PackageContext) -> ReleaseSet:
+    async def resolve(self, context: PackageContext) -> ReleaseSet:
         """Compute the `ReleaseSet`."""
 
 
@@ -88,11 +89,9 @@ class EagerLazyReleaseSet(LazyReleaseSet):
         (package,) = packages
         return package
 
-    def resolve(self, context: PackageContext) -> ReleaseSet:
-        return ReleaseSet(
-            context.package,
-            frozenset(r.resolve(context) for r in self.releases),
-        )
+    async def resolve(self, context: PackageContext) -> ReleaseSet:
+        releases = await asyncio.gather(*[r.resolve(context) for r in self.releases])
+        return ReleaseSet(context.package, frozenset(releases))
 
 
 @dataclass(order=True, frozen=True)
@@ -107,9 +106,9 @@ class AllLazyReleaseSet(LazyReleaseSet):
     def get_package(self) -> str | None:
         return self.package
 
-    def resolve(self, context: PackageContext) -> ReleaseSet:
+    async def resolve(self, context: PackageContext) -> ReleaseSet:
         package = self.package or context.package
-        return context.releases(package)
+        return await context.releases(package)
 
 
 @dataclass(order=True, frozen=True)
@@ -124,8 +123,8 @@ class ProdLazyReleaseSet(LazyReleaseSet):
     def get_package(self) -> str | None:
         return self.source.get_package()
 
-    def resolve(self, context: PackageContext) -> ReleaseSet:
-        release_set = self.source.resolve(context)
+    async def resolve(self, context: PackageContext) -> ReleaseSet:
+        release_set = await self.source.resolve(context)
         return ReleaseSet(
             package=release_set.package,
             releases=frozenset(
@@ -146,8 +145,8 @@ class PreLazyReleaseSet(LazyReleaseSet):
     def get_package(self) -> str | None:
         return self.source.get_package()
 
-    def resolve(self, context: PackageContext) -> ReleaseSet:
-        release_set = self.source.resolve(context)
+    async def resolve(self, context: PackageContext) -> ReleaseSet:
+        release_set = await self.source.resolve(context)
         return ReleaseSet(
             package=release_set.package,
             releases=frozenset(r for r in release_set if not r.version.is_devrelease),
@@ -166,9 +165,11 @@ class SpecifierLazyReleaseSet(LazyReleaseSet):
     def get_package(self) -> str | None:
         return self.source.get_package()
 
-    def resolve(self, context: PackageContext) -> ReleaseSet:
-        release_set = self.source.resolve(context)
-        specifier_set = self.specifier_set.resolve(context)
+    async def resolve(self, context: PackageContext) -> ReleaseSet:
+        release_set, specifier_set = await asyncio.gather(
+            self.source.resolve(context),
+            self.specifier_set.resolve(context),
+        )
         return ReleaseSet(
             package=release_set.package,
             releases=frozenset(r for r in release_set if r.version in specifier_set),
@@ -226,7 +227,7 @@ class LazyVersion(ABC):
     """Strategy for computing a `Version` in the context of a package."""
 
     @abstractmethod
-    def resolve(self, context: PackageContext) -> Version:
+    async def resolve(self, context: PackageContext) -> Version:
         """Compute the `Version`."""
 
 
@@ -236,7 +237,7 @@ class EagerLazyVersion(LazyVersion):
 
     version: Version
 
-    def resolve(self, context: PackageContext) -> Version:
+    async def resolve(self, context: PackageContext) -> Version:
         return self.version
 
 
@@ -246,8 +247,8 @@ class ReleaseLazyVersion(LazyVersion):
 
     release: LazyRelease
 
-    def resolve(self, context: PackageContext) -> Version:
-        return self.release.resolve(context).version
+    async def resolve(self, context: PackageContext) -> Version:
+        return (await self.release.resolve(context)).version
 
 
 AnyVersion: TypeAlias = str | Release | LazyRelease | Version | LazyVersion
@@ -321,10 +322,10 @@ class LazySpecifier:
     op: SpecifierOperator
     version: LazyVersion
 
-    def resolve(self, context: PackageContext) -> Specifier:
+    async def resolve(self, context: PackageContext) -> Specifier:
         """Compute the `Specifier`."""
         op = self.op
-        version = self.version.resolve(context)
+        version = await self.version.resolve(context)
         return Specifier(f"{op.value}{version}")
 
     @overload
@@ -381,9 +382,9 @@ class LazySpecifierSet:
 
     specifiers: frozenset[LazySpecifier]
 
-    def resolve(self, context: PackageContext) -> SpecifierSet:
+    async def resolve(self, context: PackageContext) -> SpecifierSet:
         """Compute the `SpecifierSet`."""
-        specifiers = [s.resolve(context) for s in self.specifiers]
+        specifiers = await asyncio.gather(*[s.resolve(context) for s in self.specifiers])
         return SpecifierSet(",".join(str(s) for s in specifiers))
 
     @overload
@@ -499,7 +500,7 @@ class LazyRequirement:
     def assert_valid(self) -> None:
         assert self.package, f"A requirement must have the package name set. Found: {self.package}."
 
-    def resolve(self, context: Context) -> Requirement:
+    async def resolve(self, context: Context) -> Requirement:
         """Compute the `Requirement`."""
         self.assert_valid()
         assert self.package
@@ -512,7 +513,7 @@ class LazyRequirement:
             tokens.append(f"[{formatted_extras}]")
 
         package_context = context.for_package(self.package)
-        specifier = self.specifier.resolve(package_context)
+        specifier = await self.specifier.resolve(package_context)
         tokens.append(str(specifier))
 
         if self.url:
@@ -647,7 +648,7 @@ class LazyRequirementSet(ABC):
     """
 
     @abstractmethod
-    def resolve(self, context: Context) -> RequirementSet:
+    async def resolve(self, context: Context) -> RequirementSet:
         """Compute the `RequirementSet`."""
 
 
@@ -657,8 +658,9 @@ class EagerLazyRequirementSet(LazyRequirementSet):
 
     requirements: frozenset[LazyRequirement]
 
-    def resolve(self, context: Context) -> RequirementSet:
-        return RequirementSet.new(r.resolve(context) for r in self.requirements)
+    async def resolve(self, context: Context) -> RequirementSet:
+        requirements = await asyncio.gather(*[r.resolve(context) for r in self.requirements])
+        return RequirementSet.new(requirements)
 
 
 AnyRequirementSet: TypeAlias = (

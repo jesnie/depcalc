@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -65,8 +66,8 @@ foo<2.0.0,>=1.2.3
     with TextRequirementsFile.open(requirements_path) as requirements:
         compreq = MagicMock(CompReq)
         compreq.context = MagicMock(Context)
-        compreq.resolve_requirement_set.side_effect = lambda r: get_lazy_requirement_set(r).resolve(
-            compreq.context
+        compreq.resolve_requirement_set.side_effect = lambda r: asyncio.run(
+            get_lazy_requirement_set(r).resolve(compreq.context)
         )
 
         requirements.set_requirements(compreq, REQUIREMENTS)

@@ -38,7 +38,7 @@ class PackageContext(ABC):
         """The "current" time."""
 
     @abstractmethod
-    def releases(self, package: str) -> ReleaseSet:
+    async def releases(self, package: str) -> ReleaseSet:
         """Fetch all releases of `package`."""
 
 
@@ -73,7 +73,7 @@ class Context(ABC):
         """Create a new context for the given package."""
 
     @abstractmethod
-    def releases(self, package: str) -> ReleaseSet:
+    async def releases(self, package: str) -> ReleaseSet:
         """Fetch all releases of `package`."""
 
 
@@ -100,8 +100,8 @@ class DefaultPackageContext(PackageContext):
     def now(self) -> UtcDatetime:
         return self._parent.now
 
-    def releases(self, package: str) -> ReleaseSet:
-        return self._parent.releases(package)
+    async def releases(self, package: str) -> ReleaseSet:
+        return await self._parent.releases(package)
 
 
 class DefaultContext(Context):
@@ -159,8 +159,8 @@ class DefaultContext(Context):
     def for_package(self, package: str) -> DefaultPackageContext:
         return DefaultPackageContext(self, package)
 
-    def releases(self, package: str) -> ReleaseSet:
+    async def releases(self, package: str) -> ReleaseSet:
         if package == "python":
-            return get_python_releases(self._python_specifier)
+            return await get_python_releases(self._python_specifier)
         else:
-            return get_pypi_releases(package)
+            return await get_pypi_releases(package)

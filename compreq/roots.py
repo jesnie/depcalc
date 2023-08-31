@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import NoReturn, overload
 
 from packaging.requirements import Requirement
@@ -125,26 +126,33 @@ class CompReq:
 
     def resolve_release(self, package: str, release: AnyRelease) -> Release:
         context = self._context.for_package(package)
-        return get_lazy_release(release).resolve(context)
+        future = get_lazy_release(release).resolve(context)
+        return asyncio.run(future)
 
     def resolve_release_set(self, package: str, release_set: AnyReleaseSet) -> ReleaseSet:
         context = self._context.for_package(package)
-        return get_lazy_release_set(release_set).resolve(context)
+        future = get_lazy_release_set(release_set).resolve(context)
+        return asyncio.run(future)
 
     def resolve_version(self, package: str, version: AnyVersion) -> Version:
         context = self._context.for_package(package)
-        return get_lazy_version(version).resolve(context)
+        future = get_lazy_version(version).resolve(context)
+        return asyncio.run(future)
 
     def resolve_specifier(self, package: str, specifier: AnySpecifier) -> Specifier:
         context = self._context.for_package(package)
-        return get_lazy_specifier(specifier).resolve(context)
+        future = get_lazy_specifier(specifier).resolve(context)
+        return asyncio.run(future)
 
     def resolve_specifier_set(self, package: str, specifier_set: AnySpecifierSet) -> SpecifierSet:
         context = self._context.for_package(package)
-        return get_lazy_specifier_set(specifier_set).resolve(context)
+        future = get_lazy_specifier_set(specifier_set).resolve(context)
+        return asyncio.run(future)
 
     def resolve_requirement(self, requirement: AnyRequirement) -> Requirement:
-        return get_lazy_requirement(requirement).resolve(self._context)
+        future = get_lazy_requirement(requirement).resolve(self._context)
+        return asyncio.run(future)
 
     def resolve_requirement_set(self, requirement_set: AnyRequirementSet) -> RequirementSet:
-        return get_lazy_requirement_set(requirement_set).resolve(self._context)
+        future = get_lazy_requirement_set(requirement_set).resolve(self._context)
+        return asyncio.run(future)

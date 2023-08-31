@@ -1,5 +1,6 @@
 # pylint: disable=redefined-outer-name
 
+import asyncio
 import datetime as dt
 from dataclasses import dataclass, replace
 from typing import Final
@@ -179,8 +180,8 @@ class MinLazyRelease(LazyRelease):
     def get_package(self) -> str | None:
         return self.release_set.get_package()
 
-    def resolve(self, context: PackageContext) -> Release:
-        release_set = self.release_set.resolve(context)
+    async def resolve(self, context: PackageContext) -> Release:
+        release_set = await self.release_set.resolve(context)
         return min(release_set)
 
 
@@ -209,8 +210,8 @@ class MaxLazyRelease(LazyRelease):
     def get_package(self) -> str | None:
         return self.release_set.get_package()
 
-    def resolve(self, context: PackageContext) -> Release:
-        release_set = self.release_set.resolve(context)
+    async def resolve(self, context: PackageContext) -> Release:
+        release_set = await self.release_set.resolve(context)
         return max(release_set)
 
 
@@ -236,8 +237,9 @@ class MinimumLazyVersion(LazyVersion):
 
     versions: tuple[LazyVersion, ...]
 
-    def resolve(self, context: PackageContext) -> Version:
-        return min(v.resolve(context) for v in self.versions)
+    async def resolve(self, context: PackageContext) -> Version:
+        versions: list[Version] = await asyncio.gather(*[v.resolve(context) for v in self.versions])
+        return min(versions)
 
 
 def minimum_ver(*versions: AnyVersion) -> LazyVersion:
@@ -262,8 +264,9 @@ class MaximumLazyVersion(LazyVersion):
 
     versions: tuple[LazyVersion, ...]
 
-    def resolve(self, context: PackageContext) -> Version:
-        return max(v.resolve(context) for v in self.versions)
+    async def resolve(self, context: PackageContext) -> Version:
+        versions: list[Version] = await asyncio.gather(*[v.resolve(context) for v in self.versions])
+        return max(versions)
 
 
 def maximum_ver(*versions: AnyVersion) -> LazyVersion:
@@ -288,8 +291,8 @@ class CeilLazyVersion(LazyVersion):
     version: LazyVersion
     keep_trailing_zeros: bool
 
-    def resolve(self, context: PackageContext) -> Version:
-        version = self.version.resolve(context)
+    async def resolve(self, context: PackageContext) -> Version:
+        version = await self.version.resolve(context)
         return ceil(self.level, version, self.keep_trailing_zeros)
 
 
@@ -323,8 +326,8 @@ class FloorLazyVersion(LazyVersion):
     version: LazyVersion
     keep_trailing_zeros: bool
 
-    def resolve(self, context: PackageContext) -> Version:
-        version = self.version.resolve(context)
+    async def resolve(self, context: PackageContext) -> Version:
+        version = await self.version.resolve(context)
         return floor(self.level, version, self.keep_trailing_zeros)
 
 
@@ -359,8 +362,8 @@ class MinAgeLazyReleaseSet(LazyReleaseSet):
     def get_package(self) -> str | None:
         return self.release_set.get_package()
 
-    def resolve(self, context: PackageContext) -> ReleaseSet:
-        release_set = self.release_set.resolve(context)
+    async def resolve(self, context: PackageContext) -> ReleaseSet:
+        release_set = await self.release_set.resolve(context)
 
         now = self.now or context.now
         max_time = now - self.min_age
@@ -423,8 +426,8 @@ class MaxAgeLazyReleaseSet(LazyReleaseSet):
     def get_package(self) -> str | None:
         return self.release_set.get_package()
 
-    def resolve(self, context: PackageContext) -> ReleaseSet:
-        release_set = self.release_set.resolve(context)
+    async def resolve(self, context: PackageContext) -> ReleaseSet:
+        release_set = await self.release_set.resolve(context)
 
         now = self.now or context.now
         min_time = now - self.max_age
@@ -486,8 +489,8 @@ class CountLazyReleaseSet(LazyReleaseSet):
     def get_package(self) -> str | None:
         return self.release_set.get_package()
 
-    def resolve(self, context: PackageContext) -> ReleaseSet:
-        release_set = self.release_set.resolve(context)
+    async def resolve(self, context: PackageContext) -> ReleaseSet:
+        release_set = await self.release_set.resolve(context)
         fixed_level = IntLevel(self.level.index(max(release_set).version))
         unique_versions_at_level = {
             floor(fixed_level, r.version, keep_trailing_zeros=False) for r in release_set
@@ -533,18 +536,18 @@ class RequirementsLazyRequirementSet(LazyRequirementSet):
     This must resolve to exactly one actual release.
     """
 
-    def resolve(self, context: Context) -> RequirementSet:
+    async def resolve(self, context: Context) -> RequirementSet:
         python_version = context.default_python
         pcontext = context.for_package(self.package)
-        releases = self.release.resolve(pcontext)
+        releases = await self.release.resolve(pcontext)
         assert len(releases) == 1, releases
         (release,) = releases.releases
         requirement = Requirement(f"{release.package}=={release.version}")
         requirement_set = RequirementSet.new([requirement])
 
-        with temp_venv(python_version) as venv:
-            venv.install(requirement_set, deps=False)
-            return venv.package_metadata(release.package).requires
+        async with temp_venv(python_version) as venv:
+            await venv.install(requirement_set, deps=False)
+            return (await venv.package_metadata(release.package)).requires
 
 
 def requirements(release_set: AnyReleaseSet, package: str | None = None) -> LazyRequirementSet:
@@ -568,8 +571,8 @@ class ConsistentLowerBoundsLazyRequirementSet(LazyRequirementSet):
 
     requirement_set: LazyRequirementSet
 
-    def resolve(self, context: Context) -> RequirementSet:
-        requirement_set = self.requirement_set.resolve(context)
+    async def resolve(self, context: Context) -> RequirementSet:
+        requirement_set = await self.requirement_set.resolve(context)
         bounds = {}
         result = []
         upper_bounds = []
@@ -601,17 +604,19 @@ class ConsistentLowerBoundsLazyRequirementSet(LazyRequirementSet):
         else:
             python_version = context.default_python
 
-        with temp_venv(python_version) as venv:
-            venv.install(RequirementSet.new(result + upper_bounds))
+        async with temp_venv(python_version) as venv:
+            await venv.install(RequirementSet.new(result + upper_bounds))
 
-            for ub in upper_bounds:
+            async def _get_requirement(ub: Requirement) -> Requirement:
                 package = ub.name
                 b = bounds[package]
                 assert b.lower, b
-                version = venv.package_metadata(package).version
+                version = (await venv.package_metadata(package)).version
                 assert b.lower >= version, (b, version)
                 specifiers = replace(b, lower=version).minimal_specifier_set()
-                result.append(make_requirement(requirement_set[package], specifier=specifiers))
+                return make_requirement(requirement_set[package], specifier=specifiers)
+
+            result.extend(await asyncio.gather(*[_get_requirement(ub) for ub in upper_bounds]))
 
         if python:
             result.append(python)

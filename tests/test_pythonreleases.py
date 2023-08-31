@@ -7,7 +7,7 @@ from compreq import get_python_releases
 from tests.utils import FakeRequestsGet, assert_release_set, make_fake_ftp_data, utc
 
 
-def test_pythonreleases(monkeypatch: MonkeyPatch) -> None:
+async def test_pythonreleases(monkeypatch: MonkeyPatch) -> None:
     fake_requests_get = FakeRequestsGet(
         make_fake_ftp_data(
             [
@@ -57,5 +57,5 @@ def test_pythonreleases(monkeypatch: MonkeyPatch) -> None:
             ("3.9.0", utc(dt.datetime(2023, 8, 22, 16, 6)), "3.9.1"),
             ("3.9.1", utc(dt.datetime(2023, 8, 22, 16, 7)), None),
         ],
-        get_python_releases(SpecifierSet(">=2.7")),
+        await get_python_releases(SpecifierSet(">=2.7")),
     )

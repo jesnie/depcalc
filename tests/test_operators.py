@@ -1,6 +1,6 @@
 import datetime as dt
-from collections.abc import Iterator
-from contextlib import contextmanager
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Collection, Sequence
 from unittest.mock import MagicMock
 
@@ -110,13 +110,13 @@ def test_devreleases() -> None:
         (["1!1.0.0"], "1!1.0.0"),
     ],
 )
-def test_min_ver(releases: Collection[str], expected: str) -> None:
+async def test_min_ver(releases: Collection[str], expected: str) -> None:
     release_set = fake_release_set(releases=releases, infer_successors=False)
     context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     min_ver = cr.min_ver(release_set)
     assert "foo.bar" == min_ver.get_package()
-    assert fake_release(version=expected) == min_ver.resolve(context)
+    assert fake_release(version=expected) == await min_ver.resolve(context)
     assert context.releases.called_once_with("foo.bar")
 
 
@@ -130,13 +130,13 @@ def test_min_ver(releases: Collection[str], expected: str) -> None:
         (["1.2.2"], "1.2.2"),
     ],
 )
-def test_max_ver(releases: Collection[str], expected: str) -> None:
+async def test_max_ver(releases: Collection[str], expected: str) -> None:
     release_set = fake_release_set(releases=releases, infer_successors=False)
     context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     max_ver = cr.max_ver(release_set)
     assert "foo.bar" == max_ver.get_package()
-    assert fake_release(version=expected) == max_ver.resolve(context)
+    assert fake_release(version=expected) == await max_ver.resolve(context)
     assert context.releases.called_once_with("foo.bar")
 
 
@@ -148,10 +148,10 @@ def test_max_ver(releases: Collection[str], expected: str) -> None:
         (["1.1.1"], "1.1.1"),
     ],
 )
-def test_minimum_ver(versions: Sequence[str], expected: str) -> None:
+async def test_minimum_ver(versions: Sequence[str], expected: str) -> None:
     context = MagicMock(cr.PackageContext)
     lazy = cr.minimum_ver(*versions)
-    assert Version(expected) == lazy.resolve(context)
+    assert Version(expected) == await lazy.resolve(context)
 
 
 @pytest.mark.parametrize(
@@ -162,10 +162,10 @@ def test_minimum_ver(versions: Sequence[str], expected: str) -> None:
         (["1.0.0"], "1.0.0"),
     ],
 )
-def test_maximum_ver(versions: Sequence[str], expected: str) -> None:
+async def test_maximum_ver(versions: Sequence[str], expected: str) -> None:
     context = MagicMock(cr.PackageContext)
     lazy = cr.maximum_ver(*versions)
-    assert Version(expected) == lazy.resolve(context)
+    assert Version(expected) == await lazy.resolve(context)
 
 
 @pytest.mark.parametrize(
@@ -205,10 +205,12 @@ def test_maximum_ver(versions: Sequence[str], expected: str) -> None:
         (cr.MAJOR, "1!0.1.0", False, "1!1"),
     ],
 )
-def test_ceil_ver(level: cr.Level, version: str, keep_trailing_zeros: bool, expected: str) -> None:
+async def test_ceil_ver(
+    level: cr.Level, version: str, keep_trailing_zeros: bool, expected: str
+) -> None:
     context = MagicMock(cr.PackageContext)
     ceil_ver = cr.ceil_ver(level, version, keep_trailing_zeros)
-    assert Version(expected) == ceil_ver.resolve(context)
+    assert Version(expected) == await ceil_ver.resolve(context)
 
 
 @pytest.mark.parametrize(
@@ -248,13 +250,15 @@ def test_ceil_ver(level: cr.Level, version: str, keep_trailing_zeros: bool, expe
         (cr.MAJOR, "1!0.1.0", False, "1!0"),
     ],
 )
-def test_floor_ver(level: cr.Level, version: str, keep_trailing_zeros: bool, expected: str) -> None:
+async def test_floor_ver(
+    level: cr.Level, version: str, keep_trailing_zeros: bool, expected: str
+) -> None:
     context = MagicMock(cr.PackageContext)
     floor_ver = cr.floor_ver(level, version, keep_trailing_zeros)
-    assert Version(expected) == floor_ver.resolve(context)
+    assert Version(expected) == await floor_ver.resolve(context)
 
 
-def test_min_age() -> None:
+async def test_min_age() -> None:
     context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     release_set = fake_release_set(
@@ -279,10 +283,10 @@ def test_min_age() -> None:
             fake_release(version="1.0.2", released_time=dt.datetime(2023, 8, 16, 16, 2, 0)),
         ],
         infer_successors=False,
-    ) == min_age.resolve(context)
+    ) == await min_age.resolve(context)
 
 
-def test_min_age__context_now() -> None:
+async def test_min_age__context_now() -> None:
     context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     context.now = utc(dt.datetime(2023, 8, 16, 16, 5, 0))
@@ -307,10 +311,10 @@ def test_min_age__context_now() -> None:
             fake_release(version="1.0.2", released_time=dt.datetime(2023, 8, 16, 16, 2, 0)),
         ],
         infer_successors=False,
-    ) == min_age.resolve(context)
+    ) == await min_age.resolve(context)
 
 
-def test_min_age__empty_allowed() -> None:
+async def test_min_age__empty_allowed() -> None:
     context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     release_set = fake_release_set(
@@ -330,10 +334,10 @@ def test_min_age__empty_allowed() -> None:
     assert fake_release_set(
         releases=[],
         infer_successors=False,
-    ) == min_age.resolve(context)
+    ) == await min_age.resolve(context)
 
 
-def test_min_age__empty_not_allowed() -> None:
+async def test_min_age__empty_not_allowed() -> None:
     context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     release_set = fake_release_set(
@@ -355,10 +359,10 @@ def test_min_age__empty_not_allowed() -> None:
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
         ],
         infer_successors=False,
-    ) == min_age.resolve(context)
+    ) == await min_age.resolve(context)
 
 
-def test_max_age() -> None:
+async def test_max_age() -> None:
     context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     release_set = fake_release_set(
@@ -382,10 +386,10 @@ def test_max_age() -> None:
             fake_release(version="1.0.4", released_time=dt.datetime(2023, 8, 16, 16, 4, 0)),
         ],
         infer_successors=False,
-    ) == max_age.resolve(context)
+    ) == await max_age.resolve(context)
 
 
-def test_max_age__context_now() -> None:
+async def test_max_age__context_now() -> None:
     context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     context.now = utc(dt.datetime(2023, 8, 16, 16, 5, 0))
@@ -408,10 +412,10 @@ def test_max_age__context_now() -> None:
             fake_release(version="1.0.4", released_time=dt.datetime(2023, 8, 16, 16, 4, 0)),
         ],
         infer_successors=False,
-    ) == max_age.resolve(context)
+    ) == await max_age.resolve(context)
 
 
-def test_max_age__empty_allowed() -> None:
+async def test_max_age__empty_allowed() -> None:
     context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     release_set = fake_release_set(
@@ -431,10 +435,10 @@ def test_max_age__empty_allowed() -> None:
     assert fake_release_set(
         releases=[],
         infer_successors=False,
-    ) == max_age.resolve(context)
+    ) == await max_age.resolve(context)
 
 
-def test_max_age__empty_not_allowed() -> None:
+async def test_max_age__empty_not_allowed() -> None:
     context = MagicMock(cr.PackageContext)
     context.package = "foo.bar"
     release_set = fake_release_set(
@@ -456,7 +460,7 @@ def test_max_age__empty_not_allowed() -> None:
             fake_release(version="1.0.4", released_time=dt.datetime(2023, 8, 16, 16, 4, 0)),
         ],
         infer_successors=False,
-    ) == max_age.resolve(context)
+    ) == await max_age.resolve(context)
 
 
 @pytest.mark.parametrize(
@@ -545,7 +549,7 @@ def test_max_age__empty_not_allowed() -> None:
         ),
     ],
 )
-def test_count(
+async def test_count(
     level: cr.Level, n: int, releases: Collection[str], expected: Collection[str]
 ) -> None:
     release_set = fake_release_set(releases=releases, infer_successors=False)
@@ -554,10 +558,12 @@ def test_count(
     count = cr.count(level, n, release_set)
 
     assert "foo.bar" == count.get_package()
-    assert fake_release_set(releases=expected, infer_successors=False) == count.resolve(context)
+    assert fake_release_set(releases=expected, infer_successors=False) == await count.resolve(
+        context
+    )
 
 
-def test_requirements(monkeypatch: MonkeyPatch) -> None:
+async def test_requirements(monkeypatch: MonkeyPatch) -> None:
     context = MagicMock(cr.Context)
     context.default_python = Version("3.9")
     pcontext = MagicMock(cr.PackageContext)
@@ -572,8 +578,8 @@ def test_requirements(monkeypatch: MonkeyPatch) -> None:
     venv = MagicMock(cr.VirtualEnv)
     venv.package_metadata.return_value = metadata
 
-    @contextmanager
-    def fake_venv(python_version: Version) -> Iterator[cr.VirtualEnv]:
+    @asynccontextmanager
+    async def fake_venv(python_version: Version) -> AsyncIterator[cr.VirtualEnv]:
         assert context.default_python == python_version
         yield venv
 
@@ -581,7 +587,7 @@ def test_requirements(monkeypatch: MonkeyPatch) -> None:
 
     lazy = cr.requirements(release)
 
-    assert requirements == lazy.resolve(context)
+    assert requirements == await lazy.resolve(context)
     context.for_package.assert_called_once_with("foo.bar")
     venv.install.assert_called_once_with(
         cr.RequirementSet.new([Requirement("foo.bar==1.2.3")]), deps=False
@@ -589,7 +595,7 @@ def test_requirements(monkeypatch: MonkeyPatch) -> None:
     venv.package_metadata.assert_called_once_with("foo.bar")
 
 
-def test_consistent_lower_bounds(monkeypatch: MonkeyPatch) -> None:
+async def test_consistent_lower_bounds(monkeypatch: MonkeyPatch) -> None:
     context = MagicMock(cr.Context)
 
     requirement_set = cr.RequirementSet.new(
@@ -615,8 +621,8 @@ def test_consistent_lower_bounds(monkeypatch: MonkeyPatch) -> None:
     venv = MagicMock(cr.VirtualEnv)
     venv.package_metadata.side_effect = fake_package_metadata
 
-    @contextmanager
-    def fake_venv(python_version: Version) -> Iterator[cr.VirtualEnv]:
+    @asynccontextmanager
+    async def fake_venv(python_version: Version) -> AsyncIterator[cr.VirtualEnv]:
         assert Version("3.9") == python_version
         yield venv
 
@@ -632,7 +638,7 @@ def test_consistent_lower_bounds(monkeypatch: MonkeyPatch) -> None:
             Requirement("dist3>1.0.0"),
             Requirement("dist4"),
         ]
-    ) == lazy.resolve(context)
+    ) == await lazy.resolve(context)
     venv.install.assert_called_once_with(
         cr.RequirementSet.new(
             [
@@ -645,7 +651,7 @@ def test_consistent_lower_bounds(monkeypatch: MonkeyPatch) -> None:
     )
 
 
-def test_consistent_lower_bounds__no_python(monkeypatch: MonkeyPatch) -> None:
+async def test_consistent_lower_bounds__no_python(monkeypatch: MonkeyPatch) -> None:
     context = MagicMock(cr.Context)
     context.default_python = Version("3.9")
 
@@ -671,8 +677,8 @@ def test_consistent_lower_bounds__no_python(monkeypatch: MonkeyPatch) -> None:
     venv = MagicMock(cr.VirtualEnv)
     venv.package_metadata.side_effect = fake_package_metadata
 
-    @contextmanager
-    def fake_venv(python_version: Version) -> Iterator[cr.VirtualEnv]:
+    @asynccontextmanager
+    async def fake_venv(python_version: Version) -> AsyncIterator[cr.VirtualEnv]:
         assert context.default_python == python_version
         yield venv
 
@@ -687,7 +693,7 @@ def test_consistent_lower_bounds__no_python(monkeypatch: MonkeyPatch) -> None:
             Requirement("dist3>1.0.0"),
             Requirement("dist4"),
         ]
-    ) == lazy.resolve(context)
+    ) == await lazy.resolve(context)
     venv.install.assert_called_once_with(
         cr.RequirementSet.new(
             [

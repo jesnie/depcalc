@@ -1,11 +1,11 @@
+import asyncio
 import json
-import subprocess
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from shutil import rmtree
 from tempfile import mkdtemp
-from typing import Iterator
+from typing import AsyncIterator
 
 from packaging.requirements import Requirement
 from packaging.specifiers import SpecifierSet
@@ -19,16 +19,13 @@ from compreq.rounding import floor
 from compreq.scripts import get_dist_metadata
 
 
-def _run(command: str) -> str:
-    result = subprocess.run(
-        command,
-        shell=True,
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+async def _run(command: str) -> str:
+    proc = await asyncio.create_subprocess_shell(
+        command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT
     )
-    stdout = result.stdout.decode("utf-8")
-    assert result.returncode == 0, (command, stdout)
+    stdout_bytes, _ = await proc.communicate()
+    stdout = stdout_bytes.decode("utf-8")
+    assert proc.returncode == 0, (command, stdout)
     return stdout
 
 
@@ -43,18 +40,18 @@ class VirtualEnv:
     def __init__(self, path: AnyPath) -> None:
         self._path = Path(path)
 
-    def run(self, command: str) -> str:
-        return _run(f". {self._path}/bin/activate && {command}")
+    async def run(self, command: str) -> str:
+        return await _run(f". {self._path}/bin/activate && {command}")
 
-    def install(self, requirement_set: RequirementSet, deps: bool = True) -> None:
+    async def install(self, requirement_set: RequirementSet, deps: bool = True) -> None:
         tokens = ["pip install"]
         if not deps:
             tokens.append("--no-deps")
         tokens.extend(f'"{r}"' for r in requirement_set.values())
-        self.run(" ".join(tokens))
+        await self.run(" ".join(tokens))
 
-    def package_metadata(self, package: str) -> DistMetadata:
-        output = self.run(f"python {get_dist_metadata.__file__} {package}")
+    async def package_metadata(self, package: str) -> DistMetadata:
+        output = await self.run(f"python {get_dist_metadata.__file__} {package}")
         data = json.loads(output)
         version = Version(data["version"])
         python_requires = make_requirement(
@@ -68,31 +65,33 @@ class VirtualEnv:
         )
 
 
-def create_venv(path: AnyPath, python_version: str | Version) -> VirtualEnv:
+async def create_venv(path: AnyPath, python_version: str | Version) -> VirtualEnv:
     if isinstance(python_version, str):
         python_version = Version(python_version)
     assert isinstance(python_version, Version)
     python_version = floor(MINOR, python_version, keep_trailing_zeros=False)
     path_ = Path(path)
-    _run(f"virtualenv -p python{python_version} {path_}")
+    await _run(f"virtualenv -p python{python_version} {path_}")
     return VirtualEnv(path_)
 
 
-def remove_venv(venv: VirtualEnv) -> None:
+async def remove_venv(venv: VirtualEnv) -> None:
     # pylint: disable=protected-access
-    rmtree(venv._path)
+    await asyncio.to_thread(rmtree, venv._path)
     venv._path = None  # type: ignore[assignment]
 
 
-@contextmanager
-def temp_venv(python_version: str | Version, clean_on_error: bool = True) -> Iterator[VirtualEnv]:
+@asynccontextmanager
+async def temp_venv(
+    python_version: str | Version, clean_on_error: bool = True
+) -> AsyncIterator[VirtualEnv]:
     path = mkdtemp("compreq_venv")
-    venv = create_venv(path, python_version)
+    venv = await create_venv(path, python_version)
     if clean_on_error:
         try:
             yield venv
         finally:
-            remove_venv(venv)
+            await remove_venv(venv)
     else:
         yield venv
-        remove_venv(venv)
+        await remove_venv(venv)
