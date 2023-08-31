@@ -11,9 +11,9 @@ from compreq.time import UtcDatetime
 
 @dataclass(order=True, frozen=True)
 class Release:
-    """A specific release of a given package."""
+    """A specific release of a given distribution."""
 
-    package: str
+    distribution: str
     version: Version
     released_time: UtcDatetime
     successor: Release | None
@@ -21,15 +21,15 @@ class Release:
 
 @dataclass(frozen=True)
 class ReleaseSet(Set[Release]):
-    """A set of releases of the same package."""
+    """A set of releases of the same distribution."""
 
-    package: str
+    distribution: str
     releases: frozenset[Release]
 
     def __post_init__(self) -> None:
         assert all(
-            r.package == self.package for r in self.releases
-        ), f"Inconsistent package names in ReleaseSet. Found: {self}."
+            r.distribution == self.distribution for r in self.releases
+        ), f"Inconsistent distribution names in ReleaseSet. Found: {self}."
 
     def __iter__(self) -> Iterator[Release]:
         return iter(self.releases)
@@ -71,4 +71,4 @@ def infer_and_set_successor(releases: ReleaseSet) -> ReleaseSet:
         if s is not None:
             r = replace(r, successor=by_version[s])
         by_version[r.version] = r
-    return ReleaseSet(package=releases.package, releases=frozenset(by_version.values()))
+    return ReleaseSet(distribution=releases.distribution, releases=frozenset(by_version.values()))

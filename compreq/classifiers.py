@@ -7,8 +7,8 @@ from compreq.roots import CompReq
 
 def get_python_classifiers(cr: CompReq, python_releases: AnyReleaseSet | None = None) -> list[str]:
     """
-    Get python package classifiers (https://pypi.org/classifiers/) corresponding to the given set of
-    python releases.
+    Get python distribution classifiers (https://pypi.org/classifiers/) corresponding to the given
+    set of python releases.
     """
     version_strs_set = set()
     version_strs_list = []
@@ -39,7 +39,7 @@ def set_python_classifiers(
     python_releases: AnyReleaseSet | None = None,
 ) -> Sequence[str]:
     """
-    Replace python package classifiers (https://pypi.org/classifiers/) in `classifiers` with
+    Replace python distribution classifiers (https://pypi.org/classifiers/) in `classifiers` with
     those corresponding to `python_releases`.
     """
     classifiers = [c for c in classifiers if not c.startswith("Programming Language :: Python :: ")]

@@ -24,7 +24,7 @@ def utc(time: dt.datetime) -> UtcDatetime:
 
 def fake_release(
     *,
-    package: str = "foo.bar",
+    distribution: str = "foo.bar",
     version: str | Version = "1.2.3",
     released_time: dt.datetime = dt.datetime(2023, 8, 11, 12, 49),
     successor: Release | None = None,
@@ -32,36 +32,36 @@ def fake_release(
     if isinstance(version, str):
         version = Version(version)
     assert isinstance(version, Version)
-    return Release(package, version, utc(released_time), successor)
+    return Release(distribution, version, utc(released_time), successor)
 
 
 def fake_release_set(
     *,
-    package: str = "foo.bar",
+    distribution: str = "foo.bar",
     releases: Collection[str | Version | Release] = (),
     infer_successors: bool = True,
 ) -> ReleaseSet:
     releases_set = set()
     for r in releases:
         if not isinstance(r, Release):
-            r = fake_release(package=package, version=r)
+            r = fake_release(distribution=distribution, version=r)
         assert isinstance(r, Release)
         releases_set.add(r)
-    release_set = ReleaseSet(package, frozenset(releases_set))
+    release_set = ReleaseSet(distribution, frozenset(releases_set))
     if infer_successors:
         release_set = infer_and_set_successor(release_set)
     return release_set
 
 
 def assert_release_set(
-    expected_package: str,
+    expected_distribution: str,
     expected_releases: Collection[tuple[str, UtcDatetime, str | None]],
     actual: ReleaseSet,
 ) -> None:
     actual_releases: set[tuple[str, UtcDatetime, str | None]] = set()
-    assert expected_package == actual.package
+    assert expected_distribution == actual.distribution
     for r in actual:
-        assert expected_package == r.package
+        assert expected_distribution == r.distribution
         successor_version = str(r.successor.version) if r.successor else None
         actual_releases.add((str(r.version), r.released_time, successor_version))
 

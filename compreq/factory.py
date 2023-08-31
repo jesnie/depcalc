@@ -11,7 +11,7 @@ _UNSET = _Unset(object())
 def make_requirement(
     base: Requirement | _Unset = _UNSET,
     *,
-    package: str | _Unset = _UNSET,
+    distribution: str | _Unset = _UNSET,
     url: str | None | _Unset = _UNSET,
     extras: set[str] | _Unset = _UNSET,
     specifier: SpecifierSet | _Unset = _UNSET,
@@ -19,8 +19,8 @@ def make_requirement(
 ) -> Requirement:
     result = Requirement.__new__(Requirement)
 
-    if isinstance(package, str):
-        result.name = package
+    if isinstance(distribution, str):
+        result.name = distribution
     else:
         assert isinstance(base, Requirement)
         result.name = base.name

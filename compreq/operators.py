@@ -11,7 +11,7 @@ from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 
 from compreq.bounds import get_bounds
-from compreq.contexts import Context, PackageContext
+from compreq.contexts import Context, DistributionContext
 from compreq.factory import make_requirement
 from compreq.lazy import (
     EMPTY_REQUIREMENT,
@@ -50,7 +50,7 @@ version: Final[VersionToken] = VersionToken()
 """
 Token for building a version specifier. Example::
 
-    package("compreq") & version(">=", "1.2.3")
+    distribution("compreq") & version(">=", "1.2.3")
 
 See also: `v`, `specifier`, `specifier_set`.
 """
@@ -60,35 +60,35 @@ v: Final[VersionToken] = version
 """
 Token for building a version specifier. Example::
 
-    pkg("compreq") & v(">=", "1.2.3")
+    dist("compreq") & v(">=", "1.2.3")
 
 See also: `version`, `specifier`, specifier_set`.
 """
 
 
-def package(value: str) -> LazyRequirement:
+def distribution(value: str) -> LazyRequirement:
     """
-    Create a `LazyRequirement` with this package. Example::
+    Create a `LazyRequirement` with this distribution. Example::
 
-        package("compreq") & version(">=", "1.2.3")
+        distribution("compreq") & version(">=", "1.2.3")
     """
-    return replace(EMPTY_REQUIREMENT, package=value)
+    return replace(EMPTY_REQUIREMENT, distribution=value)
 
 
-def pkg(value: str) -> LazyRequirement:
+def dist(value: str) -> LazyRequirement:
     """
-    Create a `LazyRequirement` with this package. Example::
+    Create a `LazyRequirement` with this distribution. Example::
 
-        pkg("compreq") & v(">=", "1.2.3")
+        dist("compreq") & v(">=", "1.2.3")
     """
-    return replace(EMPTY_REQUIREMENT, package=value)
+    return replace(EMPTY_REQUIREMENT, distribution=value)
 
 
 def url(value: str) -> LazyRequirement:
     """
     Create a `LazyRequirement` with this URL. Example::
 
-        pkg("compreq") & url("https://...")
+        dist("compreq") & url("https://...")
     """
     return replace(EMPTY_REQUIREMENT, url=value)
 
@@ -97,7 +97,7 @@ def extra(value: str) -> LazyRequirement:
     """
     Create a `LazyRequirement` with this extra. Example::
 
-        pkg("compreq") & extra("torch") & extra("tensorflow")
+        dist("compreq") & extra("torch") & extra("tensorflow")
     """
     return replace(EMPTY_REQUIREMENT, extras=frozenset([value]))
 
@@ -106,7 +106,7 @@ def specifier(value: AnySpecifier) -> LazySpecifier:
     """
     Create a `LazyRequirement` with this version specifier. Example::
 
-        pkg("compreq") & specifier(">=1.2.3")
+        dist("compreq") & specifier(">=1.2.3")
 
     See also: `version`, `v`, `specifier_set`.
     """
@@ -117,7 +117,7 @@ def specifier_set(value: AnySpecifierSet) -> LazySpecifierSet:
     """
     Create a `LazyRequirement` with this version specifier set. Example::
 
-        pkg("compreq") & specifier_set("<2.0.0,>=1.2.3")
+        dist("compreq") & specifier_set("<2.0.0,>=1.2.3")
 
     See also: `version`, `v`, `specifier`.
     """
@@ -128,43 +128,43 @@ def marker(value: AnyMarker) -> LazyRequirement:
     """
     Create a `LazyRequirement` conditional on this marker. Example::
 
-        pkg("compreq") & marker("platform_system != 'Darwin' or platform_machine != 'arm64'")
+        dist("compreq") & marker("platform_system != 'Darwin' or platform_machine != 'arm64'")
     """
     return replace(EMPTY_REQUIREMENT, marker=get_marker(value))
 
 
-def releases(package: str | None = None) -> LazyReleaseSet:
+def releases(distribution: str | None = None) -> LazyReleaseSet:
     """
-    Returns the set of all "production" releases of this package.
+    Returns the set of all "production" releases of this distribution.
 
-    :param package: Package to get releases of. If `None`, the package is determined from the
-    context.
+    :param distribution: Distribution to get releases of. If `None`, the distribution is determined
+    from the context.
     """
-    return ProdLazyReleaseSet(AllLazyReleaseSet(package))
+    return ProdLazyReleaseSet(AllLazyReleaseSet(distribution))
 
 
 def prereleases(
-    package: str | None = None,
+    distribution: str | None = None,
 ) -> LazyReleaseSet:
     """
-    Returns the set of all "production" and pre-releases of this package. (No dev-releases.)
+    Returns the set of all "production" and pre-releases of this distribution. (No dev-releases.)
 
-    :param package: Package to get releases of. If `None`, the package is determined from the
-    context.
+    :param distribution: Distribution to get releases of. If `None`, the distribution is determined
+    from the context.
     """
-    return PreLazyReleaseSet(AllLazyReleaseSet(package))
+    return PreLazyReleaseSet(AllLazyReleaseSet(distribution))
 
 
 def devreleases(
-    package: str | None = None,
+    distribution: str | None = None,
 ) -> LazyReleaseSet:
     """
-    Returns the set of all "production", pre-, and dev-releases releases of this package.
+    Returns the set of all "production", pre-, and dev-releases releases of this distribution.
 
-    :param package: Package to get releases of. If `None`, the package is determined from the
-    context.
+    :param distribution: Distribution to get releases of. If `None`, the distribution is determined
+    from the context.
     """
-    return AllLazyReleaseSet(package)
+    return AllLazyReleaseSet(distribution)
 
 
 @dataclass(order=True, frozen=True)
@@ -177,10 +177,10 @@ class MinLazyRelease(LazyRelease):
 
     release_set: LazyReleaseSet
 
-    def get_package(self) -> str | None:
-        return self.release_set.get_package()
+    def get_distribution(self) -> str | None:
+        return self.release_set.get_distribution()
 
-    async def resolve(self, context: PackageContext) -> Release:
+    async def resolve(self, context: DistributionContext) -> Release:
         release_set = await self.release_set.resolve(context)
         return min(release_set)
 
@@ -192,7 +192,7 @@ def min_ver(release_set: AnyReleaseSet | None = None) -> LazyRelease:
     See also: `max_ver`, `MinLazyRelease`, `minimum_ver`
 
     :param release_set: Set of releases to get minimum of. If `None`, all production releases of the
-        package in the context is used.
+        distribution in the context is used.
     """
     return MinLazyRelease(get_lazy_release_set(release_set))
 
@@ -207,10 +207,10 @@ class MaxLazyRelease(LazyRelease):
 
     release_set: LazyReleaseSet
 
-    def get_package(self) -> str | None:
-        return self.release_set.get_package()
+    def get_distribution(self) -> str | None:
+        return self.release_set.get_distribution()
 
-    async def resolve(self, context: PackageContext) -> Release:
+    async def resolve(self, context: DistributionContext) -> Release:
         release_set = await self.release_set.resolve(context)
         return max(release_set)
 
@@ -222,7 +222,7 @@ def max_ver(release_set: AnyReleaseSet | None = None) -> LazyRelease:
     See also: `min_ver`, `MaxLazyRelease`, `maximum_ver`
 
     :param release_set: Set of releases to get maximum of. If `None`, all production releases of the
-        package in the context is used.
+        distribution in the context is used.
     """
     return MaxLazyRelease(get_lazy_release_set(release_set))
 
@@ -237,7 +237,7 @@ class MinimumLazyVersion(LazyVersion):
 
     versions: tuple[LazyVersion, ...]
 
-    async def resolve(self, context: PackageContext) -> Version:
+    async def resolve(self, context: DistributionContext) -> Version:
         versions: list[Version] = await asyncio.gather(*[v.resolve(context) for v in self.versions])
         return min(versions)
 
@@ -249,7 +249,7 @@ def minimum_ver(*versions: AnyVersion) -> LazyVersion:
     See also: `min_ver`, `MinimumLazyVersion`, `maximum_ver`
 
     :param release_set: Set of releases to get minimum of. If `None`, all production releases of the
-        package in the context is used.
+        distribution in the context is used.
     """
     return MinimumLazyVersion(tuple(get_lazy_version(v) for v in versions))
 
@@ -264,7 +264,7 @@ class MaximumLazyVersion(LazyVersion):
 
     versions: tuple[LazyVersion, ...]
 
-    async def resolve(self, context: PackageContext) -> Version:
+    async def resolve(self, context: DistributionContext) -> Version:
         versions: list[Version] = await asyncio.gather(*[v.resolve(context) for v in self.versions])
         return max(versions)
 
@@ -276,7 +276,7 @@ def maximum_ver(*versions: AnyVersion) -> LazyVersion:
     See also: `max_ver`, `MaximumLazyVersion`, `minimum_ver`
 
     :param release_set: Set of releases to get maximum of. If `None`, all production releases of the
-        package in the context is used.
+        distribution in the context is used.
     """
     return MaximumLazyVersion(tuple(get_lazy_version(v) for v in versions))
 
@@ -291,7 +291,7 @@ class CeilLazyVersion(LazyVersion):
     version: LazyVersion
     keep_trailing_zeros: bool
 
-    async def resolve(self, context: PackageContext) -> Version:
+    async def resolve(self, context: DistributionContext) -> Version:
         version = await self.version.resolve(context)
         return ceil(self.level, version, self.keep_trailing_zeros)
 
@@ -326,7 +326,7 @@ class FloorLazyVersion(LazyVersion):
     version: LazyVersion
     keep_trailing_zeros: bool
 
-    async def resolve(self, context: PackageContext) -> Version:
+    async def resolve(self, context: DistributionContext) -> Version:
         version = await self.version.resolve(context)
         return floor(self.level, version, self.keep_trailing_zeros)
 
@@ -359,10 +359,10 @@ class MinAgeLazyReleaseSet(LazyReleaseSet):
     allow_empty: bool
     release_set: LazyReleaseSet
 
-    def get_package(self) -> str | None:
-        return self.release_set.get_package()
+    def get_distribution(self) -> str | None:
+        return self.release_set.get_distribution()
 
-    async def resolve(self, context: PackageContext) -> ReleaseSet:
+    async def resolve(self, context: DistributionContext) -> ReleaseSet:
         release_set = await self.release_set.resolve(context)
 
         now = self.now or context.now
@@ -371,7 +371,7 @@ class MinAgeLazyReleaseSet(LazyReleaseSet):
         result = frozenset(r for r in release_set if r.released_time <= max_time)
         if not (self.allow_empty or result):
             result = frozenset({min(release_set)})
-        return ReleaseSet(package=release_set.package, releases=result)
+        return ReleaseSet(distribution=release_set.distribution, releases=result)
 
 
 def min_age(
@@ -395,7 +395,7 @@ def min_age(
     `years`, `months`, `weeks`, `days`, `hours`, `minutes` or `seconds`.
 
     :param release_set: Set of releases to filter by age. If `None`, all production releases of the
-        package in the context is used.
+        distribution in the context is used.
     :param now: The point in time to compute age relative to. If unset the current time of the
         context is used.
     :param allow_empty: Whether to allow returning the empty set. If `False` and no releases are old
@@ -423,10 +423,10 @@ class MaxAgeLazyReleaseSet(LazyReleaseSet):
     allow_empty: bool
     release_set: LazyReleaseSet
 
-    def get_package(self) -> str | None:
-        return self.release_set.get_package()
+    def get_distribution(self) -> str | None:
+        return self.release_set.get_distribution()
 
-    async def resolve(self, context: PackageContext) -> ReleaseSet:
+    async def resolve(self, context: DistributionContext) -> ReleaseSet:
         release_set = await self.release_set.resolve(context)
 
         now = self.now or context.now
@@ -435,7 +435,7 @@ class MaxAgeLazyReleaseSet(LazyReleaseSet):
         result = frozenset(r for r in release_set if r.released_time >= min_time)
         if not (self.allow_empty or result):
             result = frozenset({max(release_set)})
-        return ReleaseSet(package=release_set.package, releases=result)
+        return ReleaseSet(distribution=release_set.distribution, releases=result)
 
 
 def max_age(
@@ -459,7 +459,7 @@ def max_age(
     `years`, `months`, `weeks`, `days`, `hours`, `minutes` or `seconds`.
 
     :param release_set: Set of releases to filter by age. If `None`, all production releases of the
-        package in the context is used.
+        distribution in the context is used.
     :param now: The point in time to compute age relative to. If unset the current time of the
         context is used.
     :param allow_empty: Whether to allow returning the empty set. If `False` and no releases are
@@ -486,10 +486,10 @@ class CountLazyReleaseSet(LazyReleaseSet):
     n: int
     release_set: LazyReleaseSet
 
-    def get_package(self) -> str | None:
-        return self.release_set.get_package()
+    def get_distribution(self) -> str | None:
+        return self.release_set.get_distribution()
 
-    async def resolve(self, context: PackageContext) -> ReleaseSet:
+    async def resolve(self, context: DistributionContext) -> ReleaseSet:
         release_set = await self.release_set.resolve(context)
         fixed_level = IntLevel(self.level.index(max(release_set).version))
         unique_versions_at_level = {
@@ -497,7 +497,7 @@ class CountLazyReleaseSet(LazyReleaseSet):
         }
         min_version = sorted(unique_versions_at_level, reverse=True)[: self.n][-1]
         result = frozenset(r for r in release_set if r.version >= min_version)
-        return ReleaseSet(package=release_set.package, releases=result)
+        return ReleaseSet(distribution=release_set.distribution, releases=result)
 
 
 def count(
@@ -513,7 +513,7 @@ def count(
         count(MINOR, 3)
 
     :param release_set: Set of releases to filter by age. If `None`, all production releases of the
-        package in the context is used.
+        distribution in the context is used.
     """
     return CountLazyReleaseSet(get_level(level), n, get_lazy_release_set(release_set))
 
@@ -524,9 +524,9 @@ class RequirementsLazyRequirementSet(LazyRequirementSet):
     Get all the requirements of a release.
     """
 
-    package: str
+    distribution: str
     """
-    The package to get requiremts of.
+    The distribution to get requiremts of.
     """
 
     release: LazyReleaseSet
@@ -538,29 +538,29 @@ class RequirementsLazyRequirementSet(LazyRequirementSet):
 
     async def resolve(self, context: Context) -> RequirementSet:
         python_version = context.default_python
-        pcontext = context.for_package(self.package)
-        releases = await self.release.resolve(pcontext)
+        dcontext = context.for_distribution(self.distribution)
+        releases = await self.release.resolve(dcontext)
         assert len(releases) == 1, releases
         (release,) = releases.releases
-        requirement = Requirement(f"{release.package}=={release.version}")
+        requirement = Requirement(f"{release.distribution}=={release.version}")
         requirement_set = RequirementSet.new([requirement])
 
         async with temp_venv(python_version) as venv:
             await venv.install(requirement_set, deps=False)
-            return (await venv.package_metadata(release.package)).requires
+            return (await venv.distribution_metadata(release.distribution)).requires
 
 
-def requirements(release_set: AnyReleaseSet, package: str | None = None) -> LazyRequirementSet:
+def requirements(release_set: AnyReleaseSet, distribution: str | None = None) -> LazyRequirementSet:
     """
     Returns the requirments of the given release.
 
-    If the package cannot be derived from the `release` directly, you must set `package`.
+    If the distribution cannot be derived from the `release` directly, you must set `distribution`.
     """
     lazy = get_lazy_release_set(release_set)
-    if package is None:
-        package = lazy.get_package()
-    assert package is not None, release_set
-    return RequirementsLazyRequirementSet(package, lazy)
+    if distribution is None:
+        distribution = lazy.get_distribution()
+    assert distribution is not None, release_set
+    return RequirementsLazyRequirementSet(distribution, lazy)
 
 
 @dataclass(order=True, frozen=True)
@@ -578,12 +578,12 @@ class ConsistentLowerBoundsLazyRequirementSet(LazyRequirementSet):
         upper_bounds = []
         python: Requirement | None = None
         for requirement in requirement_set.values():
-            package = requirement.name
-            if package == "python":
+            distribution = requirement.name
+            if distribution == "python":
                 python = requirement
             elif requirement.specifier:
                 b = get_bounds(requirement.specifier)
-                bounds[package] = b
+                bounds[distribution] = b
                 if b.lower and b.lower_inclusive:
                     upper_bounds.append(
                         make_requirement(
@@ -608,13 +608,13 @@ class ConsistentLowerBoundsLazyRequirementSet(LazyRequirementSet):
             await venv.install(RequirementSet.new(result + upper_bounds))
 
             async def _get_requirement(ub: Requirement) -> Requirement:
-                package = ub.name
-                b = bounds[package]
+                distribution = ub.name
+                b = bounds[distribution]
                 assert b.lower, b
-                version = (await venv.package_metadata(package)).version
+                version = (await venv.distribution_metadata(distribution)).version
                 assert b.lower >= version, (b, version)
                 specifiers = replace(b, lower=version).minimal_specifier_set()
-                return make_requirement(requirement_set[package], specifier=specifiers)
+                return make_requirement(requirement_set[distribution], specifier=specifiers)
 
             result.extend(await asyncio.gather(*[_get_requirement(ub) for ub in upper_bounds]))
 
@@ -628,7 +628,7 @@ def consistent_lower_bounds(requirement_set: AnyRequirementSet) -> LazyRequireme
     """
     Loosens lower bounds, to make them consistent.
 
-    For example: Assume you depend on two packages: foo and bar, with these releases:
+    For example: Assume you depend on two distributions: foo and bar, with these releases:
 
     * `foo 1.0.0`
     * `foo 1.1.0`

@@ -5,12 +5,12 @@ from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 from pytest import CaptureFixture, MonkeyPatch
 
-from compreq.scripts import get_dist_metadata
+from compreq.scripts import get_distribution_metadata
 
 
-def test_get_dist_metadata(monkeypatch: MonkeyPatch, capsys: CaptureFixture[str]) -> None:
-    monkeypatch.setattr("sys.argv", ["get_dist_metadata.py", "compreq"])
-    get_dist_metadata.main()
+def test_get_distribution_metadata(monkeypatch: MonkeyPatch, capsys: CaptureFixture[str]) -> None:
+    monkeypatch.setattr("sys.argv", ["get_distribution_metadata.py", "compreq"])
+    get_distribution_metadata.main()
     captured = capsys.readouterr()
     metadata = json.loads(captured.out)
     assert "compreq" == metadata["name"]

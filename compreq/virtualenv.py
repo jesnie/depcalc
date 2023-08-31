@@ -16,7 +16,7 @@ from compreq.levels import MINOR
 from compreq.paths import AnyPath
 from compreq.requirements import RequirementSet
 from compreq.rounding import floor
-from compreq.scripts import get_dist_metadata
+from compreq.scripts import get_distribution_metadata
 
 
 async def _run(command: str) -> str:
@@ -30,8 +30,8 @@ async def _run(command: str) -> str:
 
 
 @dataclass
-class DistMetadata:
-    package: str
+class DistributionMetadata:
+    distribution: str
     version: Version
     requires: RequirementSet
 
@@ -50,16 +50,16 @@ class VirtualEnv:
         tokens.extend(f'"{r}"' for r in requirement_set.values())
         await self.run(" ".join(tokens))
 
-    async def package_metadata(self, package: str) -> DistMetadata:
-        output = await self.run(f"python {get_dist_metadata.__file__} {package}")
+    async def distribution_metadata(self, distribution: str) -> DistributionMetadata:
+        output = await self.run(f"python {get_distribution_metadata.__file__} {distribution}")
         data = json.loads(output)
         version = Version(data["version"])
         python_requires = make_requirement(
-            package="python", specifier=SpecifierSet(data["requires_python"])
+            distribution="python", specifier=SpecifierSet(data["requires_python"])
         )
         requires = [python_requires] + [Requirement(r) for r in data["requires"]]
-        return DistMetadata(
-            package=package,
+        return DistributionMetadata(
+            distribution=distribution,
             version=version,
             requires=RequirementSet.new(requires),
         )

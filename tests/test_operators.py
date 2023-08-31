@@ -21,9 +21,9 @@ def test_version() -> None:
     "requirement,expected",
     [
         (
-            cr.package("foo.bar"),
+            cr.distribution("foo.bar"),
             cr.LazyRequirement(
-                package="foo.bar",
+                distribution="foo.bar",
                 url=None,
                 extras=frozenset(),
                 specifier=cr.LazySpecifierSet(frozenset()),
@@ -31,9 +31,9 @@ def test_version() -> None:
             ),
         ),
         (
-            cr.pkg("foo.bar"),
+            cr.dist("foo.bar"),
             cr.LazyRequirement(
-                package="foo.bar",
+                distribution="foo.bar",
                 url=None,
                 extras=frozenset(),
                 specifier=cr.LazySpecifierSet(frozenset()),
@@ -43,7 +43,7 @@ def test_version() -> None:
         (
             cr.url("http://path/v1.2.3"),
             cr.LazyRequirement(
-                package=None,
+                distribution=None,
                 url="http://path/v1.2.3",
                 extras=frozenset(),
                 specifier=cr.LazySpecifierSet(frozenset()),
@@ -53,7 +53,7 @@ def test_version() -> None:
         (
             cr.extra("extra"),
             cr.LazyRequirement(
-                package=None,
+                distribution=None,
                 url=None,
                 extras=frozenset(["extra"]),
                 specifier=cr.LazySpecifierSet(frozenset()),
@@ -71,7 +71,7 @@ def test_version() -> None:
         (
             cr.marker("python_version=='1.2.3'"),
             cr.LazyRequirement(
-                package=None,
+                distribution=None,
                 url=None,
                 extras=frozenset(),
                 specifier=cr.LazySpecifierSet(frozenset()),
@@ -111,10 +111,10 @@ def test_devreleases() -> None:
 )
 async def test_min_ver(releases: Collection[str], expected: str) -> None:
     release_set = fake_release_set(releases=releases, infer_successors=False)
-    context = MagicMock(cr.PackageContext)
-    context.package = "foo.bar"
+    context = MagicMock(cr.DistributionContext)
+    context.distribution = "foo.bar"
     min_ver = cr.min_ver(release_set)
-    assert "foo.bar" == min_ver.get_package()
+    assert "foo.bar" == min_ver.get_distribution()
     assert fake_release(version=expected) == await min_ver.resolve(context)
     assert context.releases.called_once_with("foo.bar")
 
@@ -131,10 +131,10 @@ async def test_min_ver(releases: Collection[str], expected: str) -> None:
 )
 async def test_max_ver(releases: Collection[str], expected: str) -> None:
     release_set = fake_release_set(releases=releases, infer_successors=False)
-    context = MagicMock(cr.PackageContext)
-    context.package = "foo.bar"
+    context = MagicMock(cr.DistributionContext)
+    context.distribution = "foo.bar"
     max_ver = cr.max_ver(release_set)
-    assert "foo.bar" == max_ver.get_package()
+    assert "foo.bar" == max_ver.get_distribution()
     assert fake_release(version=expected) == await max_ver.resolve(context)
     assert context.releases.called_once_with("foo.bar")
 
@@ -148,7 +148,7 @@ async def test_max_ver(releases: Collection[str], expected: str) -> None:
     ],
 )
 async def test_minimum_ver(versions: Sequence[str], expected: str) -> None:
-    context = MagicMock(cr.PackageContext)
+    context = MagicMock(cr.DistributionContext)
     lazy = cr.minimum_ver(*versions)
     assert Version(expected) == await lazy.resolve(context)
 
@@ -162,7 +162,7 @@ async def test_minimum_ver(versions: Sequence[str], expected: str) -> None:
     ],
 )
 async def test_maximum_ver(versions: Sequence[str], expected: str) -> None:
-    context = MagicMock(cr.PackageContext)
+    context = MagicMock(cr.DistributionContext)
     lazy = cr.maximum_ver(*versions)
     assert Version(expected) == await lazy.resolve(context)
 
@@ -207,7 +207,7 @@ async def test_maximum_ver(versions: Sequence[str], expected: str) -> None:
 async def test_ceil_ver(
     level: cr.Level, version: str, keep_trailing_zeros: bool, expected: str
 ) -> None:
-    context = MagicMock(cr.PackageContext)
+    context = MagicMock(cr.DistributionContext)
     ceil_ver = cr.ceil_ver(level, version, keep_trailing_zeros)
     assert Version(expected) == await ceil_ver.resolve(context)
 
@@ -252,14 +252,14 @@ async def test_ceil_ver(
 async def test_floor_ver(
     level: cr.Level, version: str, keep_trailing_zeros: bool, expected: str
 ) -> None:
-    context = MagicMock(cr.PackageContext)
+    context = MagicMock(cr.DistributionContext)
     floor_ver = cr.floor_ver(level, version, keep_trailing_zeros)
     assert Version(expected) == await floor_ver.resolve(context)
 
 
 async def test_min_age() -> None:
-    context = MagicMock(cr.PackageContext)
-    context.package = "foo.bar"
+    context = MagicMock(cr.DistributionContext)
+    context.distribution = "foo.bar"
     release_set = fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -274,7 +274,7 @@ async def test_min_age() -> None:
     min_age = cr.min_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 5, 0)), minutes=3, allow_empty=True
     )
-    assert "foo.bar" == min_age.get_package()
+    assert "foo.bar" == min_age.get_distribution()
     assert fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -286,8 +286,8 @@ async def test_min_age() -> None:
 
 
 async def test_min_age__context_now() -> None:
-    context = MagicMock(cr.PackageContext)
-    context.package = "foo.bar"
+    context = MagicMock(cr.DistributionContext)
+    context.distribution = "foo.bar"
     context.now = utc(dt.datetime(2023, 8, 16, 16, 5, 0))
 
     release_set = fake_release_set(
@@ -302,7 +302,7 @@ async def test_min_age__context_now() -> None:
     )
 
     min_age = cr.min_age(release_set, minutes=3, allow_empty=True)
-    assert "foo.bar" == min_age.get_package()
+    assert "foo.bar" == min_age.get_distribution()
     assert fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -314,8 +314,8 @@ async def test_min_age__context_now() -> None:
 
 
 async def test_min_age__empty_allowed() -> None:
-    context = MagicMock(cr.PackageContext)
-    context.package = "foo.bar"
+    context = MagicMock(cr.DistributionContext)
+    context.distribution = "foo.bar"
     release_set = fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -329,7 +329,7 @@ async def test_min_age__empty_allowed() -> None:
     min_age = cr.min_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 5, 0)), minutes=6, allow_empty=True
     )
-    assert "foo.bar" == min_age.get_package()
+    assert "foo.bar" == min_age.get_distribution()
     assert fake_release_set(
         releases=[],
         infer_successors=False,
@@ -337,8 +337,8 @@ async def test_min_age__empty_allowed() -> None:
 
 
 async def test_min_age__empty_not_allowed() -> None:
-    context = MagicMock(cr.PackageContext)
-    context.package = "foo.bar"
+    context = MagicMock(cr.DistributionContext)
+    context.distribution = "foo.bar"
     release_set = fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -352,7 +352,7 @@ async def test_min_age__empty_not_allowed() -> None:
     min_age = cr.min_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 5, 0)), minutes=6, allow_empty=False
     )
-    assert "foo.bar" == min_age.get_package()
+    assert "foo.bar" == min_age.get_distribution()
     assert fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -362,8 +362,8 @@ async def test_min_age__empty_not_allowed() -> None:
 
 
 async def test_max_age() -> None:
-    context = MagicMock(cr.PackageContext)
-    context.package = "foo.bar"
+    context = MagicMock(cr.DistributionContext)
+    context.distribution = "foo.bar"
     release_set = fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -377,7 +377,7 @@ async def test_max_age() -> None:
     max_age = cr.max_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 5, 0)), minutes=3, allow_empty=True
     )
-    assert "foo.bar" == max_age.get_package()
+    assert "foo.bar" == max_age.get_distribution()
     assert fake_release_set(
         releases=[
             fake_release(version="1.0.2", released_time=dt.datetime(2023, 8, 16, 16, 2, 0)),
@@ -389,8 +389,8 @@ async def test_max_age() -> None:
 
 
 async def test_max_age__context_now() -> None:
-    context = MagicMock(cr.PackageContext)
-    context.package = "foo.bar"
+    context = MagicMock(cr.DistributionContext)
+    context.distribution = "foo.bar"
     context.now = utc(dt.datetime(2023, 8, 16, 16, 5, 0))
     release_set = fake_release_set(
         releases=[
@@ -403,7 +403,7 @@ async def test_max_age__context_now() -> None:
         infer_successors=False,
     )
     max_age = cr.max_age(release_set, minutes=3, allow_empty=True)
-    assert "foo.bar" == max_age.get_package()
+    assert "foo.bar" == max_age.get_distribution()
     assert fake_release_set(
         releases=[
             fake_release(version="1.0.2", released_time=dt.datetime(2023, 8, 16, 16, 2, 0)),
@@ -415,8 +415,8 @@ async def test_max_age__context_now() -> None:
 
 
 async def test_max_age__empty_allowed() -> None:
-    context = MagicMock(cr.PackageContext)
-    context.package = "foo.bar"
+    context = MagicMock(cr.DistributionContext)
+    context.distribution = "foo.bar"
     release_set = fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -430,7 +430,7 @@ async def test_max_age__empty_allowed() -> None:
     max_age = cr.max_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 10, 0)), minutes=3, allow_empty=True
     )
-    assert "foo.bar" == max_age.get_package()
+    assert "foo.bar" == max_age.get_distribution()
     assert fake_release_set(
         releases=[],
         infer_successors=False,
@@ -438,8 +438,8 @@ async def test_max_age__empty_allowed() -> None:
 
 
 async def test_max_age__empty_not_allowed() -> None:
-    context = MagicMock(cr.PackageContext)
-    context.package = "foo.bar"
+    context = MagicMock(cr.DistributionContext)
+    context.distribution = "foo.bar"
     release_set = fake_release_set(
         releases=[
             fake_release(version="1.0.0", released_time=dt.datetime(2023, 8, 16, 16, 0, 0)),
@@ -453,7 +453,7 @@ async def test_max_age__empty_not_allowed() -> None:
     max_age = cr.max_age(
         release_set, now=utc(dt.datetime(2023, 8, 16, 16, 10, 0)), minutes=3, allow_empty=False
     )
-    assert "foo.bar" == max_age.get_package()
+    assert "foo.bar" == max_age.get_distribution()
     assert fake_release_set(
         releases=[
             fake_release(version="1.0.4", released_time=dt.datetime(2023, 8, 16, 16, 4, 0)),
@@ -552,11 +552,11 @@ async def test_count(
     level: cr.Level, n: int, releases: Collection[str], expected: Collection[str]
 ) -> None:
     release_set = fake_release_set(releases=releases, infer_successors=False)
-    context = MagicMock(cr.PackageContext)
-    context.package = "foo.bar"
+    context = MagicMock(cr.DistributionContext)
+    context.distribution = "foo.bar"
     count = cr.count(level, n, release_set)
 
-    assert "foo.bar" == count.get_package()
+    assert "foo.bar" == count.get_distribution()
     assert fake_release_set(releases=expected, infer_successors=False) == await count.resolve(
         context
     )
@@ -565,17 +565,17 @@ async def test_count(
 async def test_requirements(monkeypatch: MonkeyPatch) -> None:
     context = MagicMock(cr.Context)
     context.default_python = Version("3.9")
-    pcontext = MagicMock(cr.PackageContext)
-    pcontext.package = "foo.bar"
-    context.for_package.return_value = pcontext
+    dcontext = MagicMock(cr.DistributionContext)
+    dcontext.distribution = "foo.bar"
+    context.for_distribution.return_value = dcontext
     release = fake_release(version="1.2.3")
 
     requirements = cr.RequirementSet.new([Requirement("foo>=1.0.0"), Requirement("bar>=2.0.0")])
-    metadata = MagicMock(cr.DistMetadata)
+    metadata = MagicMock(cr.DistributionMetadata)
     metadata.requires = requirements
 
     venv = MagicMock(cr.VirtualEnv)
-    venv.package_metadata.return_value = metadata
+    venv.distribution_metadata.return_value = metadata
 
     @asynccontextmanager
     async def fake_venv(python_version: Version) -> AsyncIterator[cr.VirtualEnv]:
@@ -587,11 +587,11 @@ async def test_requirements(monkeypatch: MonkeyPatch) -> None:
     lazy = cr.requirements(release)
 
     assert requirements == await lazy.resolve(context)
-    context.for_package.assert_called_once_with("foo.bar")
+    context.for_distribution.assert_called_once_with("foo.bar")
     venv.install.assert_called_once_with(
         cr.RequirementSet.new([Requirement("foo.bar==1.2.3")]), deps=False
     )
-    venv.package_metadata.assert_called_once_with("foo.bar")
+    venv.distribution_metadata.assert_called_once_with("foo.bar")
 
 
 async def test_consistent_lower_bounds(monkeypatch: MonkeyPatch) -> None:
@@ -607,18 +607,18 @@ async def test_consistent_lower_bounds(monkeypatch: MonkeyPatch) -> None:
         ]
     )
 
-    def fake_package_metadata(package: str) -> cr.DistMetadata:
-        metadata = MagicMock(cr.DistMetadata)
+    def fake_distribution_metadata(distribution: str) -> cr.DistributionMetadata:
+        metadata = MagicMock(cr.DistributionMetadata)
         metadata.version = Version(
             {
                 "dist1": "1.2.0",
                 "dist2": "1.12.0",
-            }[package]
+            }[distribution]
         )
         return metadata
 
     venv = MagicMock(cr.VirtualEnv)
-    venv.package_metadata.side_effect = fake_package_metadata
+    venv.distribution_metadata.side_effect = fake_distribution_metadata
 
     @asynccontextmanager
     async def fake_venv(python_version: Version) -> AsyncIterator[cr.VirtualEnv]:
@@ -663,18 +663,18 @@ async def test_consistent_lower_bounds__no_python(monkeypatch: MonkeyPatch) -> N
         ]
     )
 
-    def fake_package_metadata(package: str) -> cr.DistMetadata:
-        metadata = MagicMock(cr.DistMetadata)
+    def fake_distribution_metadata(distribution: str) -> cr.DistributionMetadata:
+        metadata = MagicMock(cr.DistributionMetadata)
         metadata.version = Version(
             {
                 "dist1": "1.2.0",
                 "dist2": "1.12.0",
-            }[package]
+            }[distribution]
         )
         return metadata
 
     venv = MagicMock(cr.VirtualEnv)
-    venv.package_metadata.side_effect = fake_package_metadata
+    venv.distribution_metadata.side_effect = fake_distribution_metadata
 
     @asynccontextmanager
     async def fake_venv(python_version: Version) -> AsyncIterator[cr.VirtualEnv]:

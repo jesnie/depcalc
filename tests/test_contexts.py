@@ -12,7 +12,7 @@ async def test_default_context(monkeypatch: MonkeyPatch) -> None:
     fake_now = utc(dt.datetime(2023, 8, 22, 14, 20))
 
     python_specifier_ = SpecifierSet("<4.0.0,>=3.9")
-    fake_python_releases = fake_release_set(package="python", releases=["3.9", "3.10", "3.11"])
+    fake_python_releases = fake_release_set(distribution="python", releases=["3.9", "3.10", "3.11"])
 
     async def fake_get_python_releases(python_specifier: SpecifierSet) -> ReleaseSet:
         assert python_specifier_ == python_specifier
@@ -20,10 +20,12 @@ async def test_default_context(monkeypatch: MonkeyPatch) -> None:
 
     monkeypatch.setattr("compreq.contexts.get_python_releases", fake_get_python_releases)
 
-    fake_foobar_releases = fake_release_set(package="foo.bar", releases=["1.2.3", "1.2.4", "1.2.5"])
+    fake_foobar_releases = fake_release_set(
+        distribution="foo.bar", releases=["1.2.3", "1.2.4", "1.2.5"]
+    )
 
-    async def fake_get_pypi_releases(package: str) -> ReleaseSet:
-        assert "foo.bar" == package
+    async def fake_get_pypi_releases(distribution: str) -> ReleaseSet:
+        assert "foo.bar" == distribution
         return fake_foobar_releases
 
     monkeypatch.setattr("compreq.contexts.get_pypi_releases", fake_get_pypi_releases)
@@ -35,13 +37,13 @@ async def test_default_context(monkeypatch: MonkeyPatch) -> None:
     assert fake_python_releases == await context.releases("python")
     assert fake_foobar_releases == await context.releases("foo.bar")
 
-    pcontext = context.for_package("foo.bar")
-    assert "foo.bar" == pcontext.package
-    assert Version("3.9") == pcontext.default_python
-    assert python_specifier_ == pcontext.python_specifier
-    assert fake_now == pcontext.now
-    assert fake_python_releases == await pcontext.releases("python")
-    assert fake_foobar_releases == await pcontext.releases("foo.bar")
+    dcontext = context.for_distribution("foo.bar")
+    assert "foo.bar" == dcontext.distribution
+    assert Version("3.9") == dcontext.default_python
+    assert python_specifier_ == dcontext.python_specifier
+    assert fake_now == dcontext.now
+    assert fake_python_releases == await dcontext.releases("python")
+    assert fake_foobar_releases == await dcontext.releases("foo.bar")
 
 
 def test_default_context__for_python(monkeypatch: MonkeyPatch) -> None:

@@ -124,28 +124,30 @@ class CompReq:
     def python_specifier(self) -> SpecifierSet:
         return self._context.python_specifier
 
-    def resolve_release(self, package: str, release: AnyRelease) -> Release:
-        context = self._context.for_package(package)
+    def resolve_release(self, distribution: str, release: AnyRelease) -> Release:
+        context = self._context.for_distribution(distribution)
         future = get_lazy_release(release).resolve(context)
         return asyncio.run(future)
 
-    def resolve_release_set(self, package: str, release_set: AnyReleaseSet) -> ReleaseSet:
-        context = self._context.for_package(package)
+    def resolve_release_set(self, distribution: str, release_set: AnyReleaseSet) -> ReleaseSet:
+        context = self._context.for_distribution(distribution)
         future = get_lazy_release_set(release_set).resolve(context)
         return asyncio.run(future)
 
-    def resolve_version(self, package: str, version: AnyVersion) -> Version:
-        context = self._context.for_package(package)
+    def resolve_version(self, distribution: str, version: AnyVersion) -> Version:
+        context = self._context.for_distribution(distribution)
         future = get_lazy_version(version).resolve(context)
         return asyncio.run(future)
 
-    def resolve_specifier(self, package: str, specifier: AnySpecifier) -> Specifier:
-        context = self._context.for_package(package)
+    def resolve_specifier(self, distribution: str, specifier: AnySpecifier) -> Specifier:
+        context = self._context.for_distribution(distribution)
         future = get_lazy_specifier(specifier).resolve(context)
         return asyncio.run(future)
 
-    def resolve_specifier_set(self, package: str, specifier_set: AnySpecifierSet) -> SpecifierSet:
-        context = self._context.for_package(package)
+    def resolve_specifier_set(
+        self, distribution: str, specifier_set: AnySpecifierSet
+    ) -> SpecifierSet:
+        context = self._context.for_distribution(distribution)
         future = get_lazy_specifier_set(specifier_set).resolve(context)
         return asyncio.run(future)
 

@@ -31,13 +31,13 @@ class PoetryPyprojectFile(PyprojectFile):
         Get the given `group` of requirements. If `group` is `None` the main group is returned.
         """
         return RequirementSet.new(
-            self._parse_requirement(package, toml)
-            for package, toml in self._get_dependencies(group).items()
+            self._parse_requirement(distribution, toml)
+            for distribution, toml in self._get_dependencies(group).items()
         )
 
-    def _parse_requirement(self, package: str, toml: Any) -> Requirement:
+    def _parse_requirement(self, distribution: str, toml: Any) -> Requirement:
         result = Requirement.__new__(Requirement)
-        result.name = package
+        result.name = distribution
         result.url = None
         result.extras = set()
         result.specifier = SpecifierSet()
@@ -128,11 +128,11 @@ class PoetryPyprojectFile(PyprojectFile):
             return self._get_poetry()["group"][group]["dependencies"]
 
     def get_classifiers(self) -> Sequence[str]:
-        """Get the package classifiers. (https://pypi.org/classifiers/)"""
+        """Get the distribution classifiers. (https://pypi.org/classifiers/)"""
         return list(self._get_poetry()["classifiers"])
 
     def set_classifiers(self, classifiers: Sequence[str]) -> None:
-        """Set the package classifiers. (https://pypi.org/classifiers/)"""
+        """Set the distribution classifiers. (https://pypi.org/classifiers/)"""
         toml = self._get_poetry()["classifiers"]
         toml.clear()
         toml.extend(classifiers)
@@ -142,7 +142,7 @@ class PoetryPyprojectFile(PyprojectFile):
         self, cr: CompReq, python_releases: AnyReleaseSet | None = None
     ) -> None:
         """
-        Replace python package classifiers (https://pypi.org/classifiers/) with those corresponding
-        to `python_releases`.
+        Replace python distribution classifiers (https://pypi.org/classifiers/) with those
+        corresponding to `python_releases`.
         """
         self.set_classifiers(set_python_classifiers(self.get_classifiers(), cr, python_releases))
