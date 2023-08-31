@@ -3,6 +3,7 @@ from __future__ import annotations
 from compreq.lazy import (
     AnySpecifierOperator,
     AnyVersion,
+    EagerLazySpecifier,
     LazySpecifier,
     SpecifierOperator,
     get_lazy_version,
@@ -18,7 +19,7 @@ class VersionToken:
     def require(self, op: AnySpecifierOperator, version: AnyVersion) -> LazySpecifier:
         op = get_specifier_operator(op)
         version = get_lazy_version(version)
-        return LazySpecifier(op, version)
+        return EagerLazySpecifier(op, version)
 
     def __call__(self, op: AnySpecifierOperator, version: AnyVersion) -> LazySpecifier:
         return self.require(op, version)

@@ -75,3 +75,9 @@ with cr.PoetryPyprojectFile.open() as pyproject:
 ```
 
 Or see [requirements.py](https://github.com/jesnie/compreq/blob/main/requirements.py).
+
+
+# References:
+
+https://peps.python.org/pep-0440/
+https://packaging.pypa.io/en/stable

@@ -327,15 +327,25 @@ def test_get_specifier_operator(
     assert cr.get_specifier_operator(op) == expected
 
 
-async def test_lazy_specifier() -> None:
+async def test_eager_lazy_specifier() -> None:
     op = cr.SpecifierOperator.LT
     version = MagicMock(cr.LazyVersion)
     version.resolve.return_value = Version("1.5.0")
-    lazy = cr.LazySpecifier(op, version)
+    lazy = cr.EagerLazySpecifier(op, version)
 
     context = MagicMock(cr.DistributionContext)
     assert Specifier("<1.5.0") == await lazy.resolve(context)
     version.resolve.assert_called_once_with(context)
+
+
+async def test_release_lazy_specifier() -> None:
+    release = MagicMock(cr.LazyRelease)
+    release.resolve.return_value = fake_release(version="1.7.8")
+    lazy = cr.ReleaseLazySpecifier(release)
+
+    context = MagicMock(cr.DistributionContext)
+    assert Specifier("==1.7.8") == await lazy.resolve(context)
+    release.resolve.assert_called_once_with(context)
 
 
 @pytest.mark.parametrize(
@@ -343,15 +353,23 @@ async def test_lazy_specifier() -> None:
     [
         (
             ">=1.1.0",
-            cr.LazySpecifier(cr.SpecifierOperator.GE, cr.EagerLazyVersion(Version("1.1.0"))),
+            cr.EagerLazySpecifier(cr.SpecifierOperator.GE, cr.EagerLazyVersion(Version("1.1.0"))),
+        ),
+        (
+            fake_release(version="2.1.4"),
+            cr.ReleaseLazySpecifier(cr.EagerLazyRelease(fake_release(version="2.1.4"))),
+        ),
+        (
+            cr.EagerLazyRelease(fake_release(version="2.1.4")),
+            cr.ReleaseLazySpecifier(cr.EagerLazyRelease(fake_release(version="2.1.4"))),
         ),
         (
             Specifier(">=1.2.0"),
-            cr.LazySpecifier(cr.SpecifierOperator.GE, cr.EagerLazyVersion(Version("1.2.0"))),
+            cr.EagerLazySpecifier(cr.SpecifierOperator.GE, cr.EagerLazyVersion(Version("1.2.0"))),
         ),
         (
-            cr.LazySpecifier(cr.SpecifierOperator.GE, cr.EagerLazyVersion(Version("1.3.0"))),
-            cr.LazySpecifier(cr.SpecifierOperator.GE, cr.EagerLazyVersion(Version("1.3.0"))),
+            cr.EagerLazySpecifier(cr.SpecifierOperator.GE, cr.EagerLazyVersion(Version("1.3.0"))),
+            cr.EagerLazySpecifier(cr.SpecifierOperator.GE, cr.EagerLazyVersion(Version("1.3.0"))),
         ),
     ],
 )
@@ -391,6 +409,22 @@ async def test_composite_lazy_specifier_set() -> None:
     "specifier_set,expected",
     [
         (">=1.1.0", cr.EagerLazySpecifierSet(frozenset([cr.get_lazy_specifier(">=1.1.0")]))),
+        (
+            fake_release(version="2.1.4"),
+            cr.EagerLazySpecifierSet(
+                frozenset(
+                    [cr.ReleaseLazySpecifier(cr.EagerLazyRelease(fake_release(version="2.1.4")))]
+                )
+            ),
+        ),
+        (
+            cr.EagerLazyRelease(fake_release(version="2.1.4")),
+            cr.EagerLazySpecifierSet(
+                frozenset(
+                    [cr.ReleaseLazySpecifier(cr.EagerLazyRelease(fake_release(version="2.1.4")))]
+                )
+            ),
+        ),
         (
             Specifier(">=1.2.0"),
             cr.EagerLazySpecifierSet(frozenset([cr.get_lazy_specifier(">=1.2.0")])),
@@ -491,6 +525,26 @@ async def test_lazy_requirement__url() -> None:
                 url=None,
                 extras=frozenset(),
                 specifier=cr.get_lazy_specifier_set("==1.1.0"),
+                marker=None,
+            ),
+        ),
+        (
+            fake_release(version="1.2.3"),
+            cr.LazyRequirement(
+                distribution="foo.bar",
+                url=None,
+                extras=frozenset(),
+                specifier=cr.get_lazy_specifier_set(fake_release(version="1.2.3")),
+                marker=None,
+            ),
+        ),
+        (
+            cr.EagerLazyRelease(fake_release(version="1.2.3")),
+            cr.LazyRequirement(
+                distribution="foo.bar",
+                url=None,
+                extras=frozenset(),
+                specifier=cr.get_lazy_specifier_set(fake_release(version="1.2.3")),
                 marker=None,
             ),
         ),
@@ -1063,6 +1117,38 @@ def test_compose__specifier_sets() -> None:
                             specifier=cr.get_lazy_specifier_set("==1.1.0"),
                             marker=None,
                         )
+                    ]
+                )
+            ),
+        ),
+        (
+            fake_release(version="1.2.3"),
+            cr.EagerLazyRequirementSet(
+                frozenset(
+                    [
+                        cr.LazyRequirement(
+                            distribution="foo.bar",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=cr.get_lazy_specifier_set(fake_release(version="1.2.3")),
+                            marker=None,
+                        ),
+                    ]
+                )
+            ),
+        ),
+        (
+            cr.EagerLazyRelease(fake_release(version="1.2.3")),
+            cr.EagerLazyRequirementSet(
+                frozenset(
+                    [
+                        cr.LazyRequirement(
+                            distribution="foo.bar",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=cr.get_lazy_specifier_set(fake_release(version="1.2.3")),
+                            marker=None,
+                        ),
                     ]
                 )
             ),

@@ -313,8 +313,7 @@ def get_specifier_operator(op: AnySpecifierOperator) -> SpecifierOperator:
     raise AssertionError(f"Unknown type of operator: {type(op)}")
 
 
-@dataclass(order=True, frozen=True)
-class LazySpecifier:
+class LazySpecifier(ABC):
     """
     Strategy for computing a `Specifier` in the context of a distribution.
 
@@ -324,14 +323,9 @@ class LazySpecifier:
         lazy_specifier_set = lazy_specifier_1 & lazy_specifier_2
     """
 
-    op: SpecifierOperator
-    version: LazyVersion
-
+    @abstractmethod
     async def resolve(self, context: DistributionContext) -> Specifier:
         """Compute the `Specifier`."""
-        op = self.op
-        version = await self.version.resolve(context)
-        return Specifier(f"{op.value}{version}")
 
     @overload
     def __and__(self, rhs: AnySpecifierSet) -> LazySpecifierSet:
@@ -356,7 +350,27 @@ class LazySpecifier:
         return compose(lhs, self)
 
 
-AnySpecifier: TypeAlias = str | Specifier | LazySpecifier
+@dataclass(order=True, frozen=True)
+class EagerLazySpecifier(LazySpecifier):
+    op: SpecifierOperator
+    version: LazyVersion
+
+    async def resolve(self, context: DistributionContext) -> Specifier:
+        op = self.op
+        version = await self.version.resolve(context)
+        return Specifier(f"{op.value}{version}")
+
+
+@dataclass(order=True, frozen=True)
+class ReleaseLazySpecifier(LazySpecifier):
+    release: LazyRelease
+
+    async def resolve(self, context: DistributionContext) -> Specifier:
+        release = await self.release.resolve(context)
+        return Specifier(f"=={release.version}")
+
+
+AnySpecifier: TypeAlias = str | Release | LazyRelease | Specifier | LazySpecifier
 """Type alias for anything that can be converted to a `LazySpecifier`."""
 
 
@@ -364,10 +378,14 @@ def get_lazy_specifier(specifier: AnySpecifier) -> LazySpecifier:
     """Get a `LazySpecifier` for the given specifier-like value."""
     if isinstance(specifier, str):
         specifier = Specifier(specifier)
+    if isinstance(specifier, Release):
+        specifier = EagerLazyRelease(specifier)
+    if isinstance(specifier, LazyRelease):
+        specifier = ReleaseLazySpecifier(specifier)
     if isinstance(specifier, Specifier):
         op = get_specifier_operator(specifier.operator)
         version = get_lazy_version(specifier.version)
-        specifier = LazySpecifier(op, version)
+        specifier = EagerLazySpecifier(op, version)
     if isinstance(specifier, LazySpecifier):
         return specifier
     raise AssertionError(f"Unknown type of specifier: {type(specifier)}")
@@ -429,7 +447,9 @@ class CompositeLazySpecifierSet(LazySpecifierSet):
         return SpecifierSet(",".join(str(s) for s in specifiers))
 
 
-AnySpecifierSet: TypeAlias = str | Specifier | LazySpecifier | SpecifierSet | LazySpecifierSet
+AnySpecifierSet: TypeAlias = (
+    str | Release | LazyRelease | Specifier | LazySpecifier | SpecifierSet | LazySpecifierSet
+)
 """Type alias for anything that can be converted to a `LazySpecifierSet`."""
 
 
@@ -437,7 +457,7 @@ def get_lazy_specifier_set(specifier_set: AnySpecifierSet) -> LazySpecifierSet:
     """Get a `LazySpecifierSet` for the given specifier-set-like value."""
     if isinstance(specifier_set, str):
         specifier_set = SpecifierSet(specifier_set)
-    if isinstance(specifier_set, Specifier):
+    if isinstance(specifier_set, (Release, LazyRelease, Specifier)):
         specifier_set = get_lazy_specifier(specifier_set)
     if isinstance(specifier_set, LazySpecifier):
         specifier_set = EagerLazySpecifierSet(frozenset([specifier_set]))
@@ -575,6 +595,8 @@ Useful for constructing partial requirements::
 
 AnyRequirement: TypeAlias = (
     str
+    | Release
+    | LazyRelease
     | Specifier
     | LazySpecifier
     | SpecifierSet
@@ -589,6 +611,16 @@ def get_lazy_requirement(requirement: AnyRequirement) -> LazyRequirement:
     """Get a `LazyRequirement` for the given requirement-like value."""
     if isinstance(requirement, str):
         requirement = Requirement(requirement)
+    if isinstance(requirement, Release):
+        requirement = EagerLazyRelease(requirement)
+    if isinstance(requirement, LazyRelease):
+        distribution = requirement.get_distribution()
+        assert distribution is not None, requirement
+        requirement = replace(
+            EMPTY_REQUIREMENT,
+            distribution=distribution,
+            specifier=get_lazy_specifier_set(requirement),
+        )
     if isinstance(requirement, (Specifier, LazySpecifier, SpecifierSet)):
         requirement = get_lazy_specifier_set(requirement)
     if isinstance(requirement, LazySpecifierSet):
@@ -609,17 +641,24 @@ def get_lazy_requirement(requirement: AnyRequirement) -> LazyRequirement:
 
 
 @overload
-def compose(lhs: AnySpecifierSet, rhs: AnySpecifierSet) -> LazySpecifierSet:
+def compose(
+    lhs: str | Specifier | LazySpecifier | SpecifierSet | LazySpecifierSet,
+    rhs: str | Specifier | LazySpecifier | SpecifierSet | LazySpecifierSet,
+) -> LazySpecifierSet:
     ...
 
 
 @overload
-def compose(lhs: AnyRequirement, rhs: Requirement | LazyRequirement) -> LazyRequirement:
+def compose(
+    lhs: AnyRequirement, rhs: Release | LazyRelease | Requirement | LazyRequirement
+) -> LazyRequirement:
     ...
 
 
 @overload
-def compose(lhs: Requirement | LazyRequirement, rhs: AnyRequirement) -> LazyRequirement:
+def compose(
+    lhs: Release | LazyRelease | Requirement | LazyRequirement, rhs: AnyRequirement
+) -> LazyRequirement:
     ...
 
 
@@ -714,6 +753,8 @@ class EagerLazyRequirementSet(LazyRequirementSet):
 
 AnyRequirementSet: TypeAlias = (
     str
+    | Release
+    | LazyRelease
     | Specifier
     | LazySpecifier
     | SpecifierSet
@@ -732,7 +773,16 @@ def get_lazy_requirement_set(requirement_set: AnyRequirementSet) -> LazyRequirem
     """Get a `LazyRequirementSet` for the given requirement-set-like value."""
     if isinstance(
         requirement_set,
-        (str, Specifier, LazySpecifier, SpecifierSet, LazySpecifierSet, Requirement),
+        (
+            str,
+            Release,
+            LazyRelease,
+            Specifier,
+            LazySpecifier,
+            SpecifierSet,
+            LazySpecifierSet,
+            Requirement,
+        ),
     ):
         requirement_set = get_lazy_requirement(requirement_set)
     if isinstance(requirement_set, LazyRequirement):
