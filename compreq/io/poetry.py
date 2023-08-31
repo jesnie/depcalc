@@ -1,4 +1,5 @@
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from packaging.markers import Marker
 from packaging.requirements import Requirement

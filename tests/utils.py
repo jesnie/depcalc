@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass
-from typing import Collection, Mapping
 
 from packaging.version import Version
 

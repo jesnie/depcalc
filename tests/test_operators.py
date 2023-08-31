@@ -1,7 +1,6 @@
 import datetime as dt
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Collection, Sequence
 from contextlib import asynccontextmanager
-from typing import Collection, Sequence
 from unittest.mock import MagicMock
 
 import pytest
