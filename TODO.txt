@@ -1,4 +1,3 @@
-* python_specifier and default_python as operators? (Remove from root?)
 * Make a release a requirment?
 
 

@@ -116,14 +116,6 @@ class CompReq:
             )
         )
 
-    @property
-    def default_python(self) -> Version:
-        return self._context.default_python
-
-    @property
-    def python_specifier(self) -> SpecifierSet:
-        return self._context.python_specifier
-
     def resolve_release(self, distribution: str, release: AnyRelease) -> Release:
         context = self._context.for_distribution(distribution)
         future = get_lazy_release(release).resolve(context)

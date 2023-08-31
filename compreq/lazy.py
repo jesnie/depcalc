@@ -210,9 +210,13 @@ def get_lazy_release_set(release_set: AnyReleaseSet | None) -> LazyReleaseSet:
     if isinstance(release_set, Requirement):
         release_set = get_lazy_requirement(release_set)
     if isinstance(release_set, LazyRequirement):
-        release_set = SpecifierLazyReleaseSet(
-            ProdLazyReleaseSet(AllLazyReleaseSet(release_set.distribution)), release_set.specifier
-        )
+        if release_set.specifier:
+            release_set = SpecifierLazyReleaseSet(
+                ProdLazyReleaseSet(AllLazyReleaseSet(release_set.distribution)),
+                release_set.specifier,
+            )
+        else:
+            release_set = ProdLazyReleaseSet(AllLazyReleaseSet(release_set.distribution))
     if isinstance(release_set, Release):
         release_set = EagerLazyRelease(release_set)
     if isinstance(release_set, LazyRelease):
@@ -369,8 +373,7 @@ def get_lazy_specifier(specifier: AnySpecifier) -> LazySpecifier:
     raise AssertionError(f"Unknown type of specifier: {type(specifier)}")
 
 
-@dataclass(frozen=True)
-class LazySpecifierSet:
+class LazySpecifierSet(ABC):
     """
     Strategy for computing a `SpecifierSet` in the context of a distribution.
 
@@ -381,12 +384,9 @@ class LazySpecifierSet:
 
     """
 
-    specifiers: frozenset[LazySpecifier]
-
+    @abstractmethod
     async def resolve(self, context: DistributionContext) -> SpecifierSet:
         """Compute the `SpecifierSet`."""
-        specifiers = await asyncio.gather(*[s.resolve(context) for s in self.specifiers])
-        return SpecifierSet(",".join(str(s) for s in specifiers))
 
     @overload
     def __and__(self, rhs: AnySpecifierSet) -> LazySpecifierSet:
@@ -411,6 +411,24 @@ class LazySpecifierSet:
         return compose(lhs, self)
 
 
+@dataclass(frozen=True)
+class EagerLazySpecifierSet(LazySpecifierSet):
+    specifiers: frozenset[LazySpecifier]
+
+    async def resolve(self, context: DistributionContext) -> SpecifierSet:
+        specifiers = await asyncio.gather(*[s.resolve(context) for s in self.specifiers])
+        return SpecifierSet(",".join(str(s) for s in specifiers))
+
+
+@dataclass(frozen=True)
+class CompositeLazySpecifierSet(LazySpecifierSet):
+    specifiers: frozenset[LazySpecifierSet]
+
+    async def resolve(self, context: DistributionContext) -> SpecifierSet:
+        specifiers = await asyncio.gather(*[s.resolve(context) for s in self.specifiers])
+        return SpecifierSet(",".join(str(s) for s in specifiers))
+
+
 AnySpecifierSet: TypeAlias = str | Specifier | LazySpecifier | SpecifierSet | LazySpecifierSet
 """Type alias for anything that can be converted to a `LazySpecifierSet`."""
 
@@ -422,9 +440,11 @@ def get_lazy_specifier_set(specifier_set: AnySpecifierSet) -> LazySpecifierSet:
     if isinstance(specifier_set, Specifier):
         specifier_set = get_lazy_specifier(specifier_set)
     if isinstance(specifier_set, LazySpecifier):
-        specifier_set = LazySpecifierSet(frozenset([specifier_set]))
+        specifier_set = EagerLazySpecifierSet(frozenset([specifier_set]))
     if isinstance(specifier_set, SpecifierSet):
-        specifier_set = LazySpecifierSet(frozenset(get_lazy_specifier(s) for s in specifier_set))
+        specifier_set = EagerLazySpecifierSet(
+            frozenset(get_lazy_specifier(s) for s in specifier_set)
+        )
     if isinstance(specifier_set, LazySpecifierSet):
         return specifier_set
     raise AssertionError(f"Unknown type of specifier set: {type(specifier_set)}")
@@ -476,7 +496,7 @@ class LazyRequirement:
     extras: frozenset[str]
     """Set of extras to install."""
 
-    specifier: LazySpecifierSet
+    specifier: LazySpecifierSet | None
     """
     Specification of which versions of the distribution are valid.
 
@@ -487,7 +507,7 @@ class LazyRequirement:
     """Marker for specifying when this requirement should be used."""
 
     def __post_init__(self) -> None:
-        assert (self.url is None) or not self.specifier.specifiers, (
+        assert (self.url is None) or (self.specifier is None), (
             "A requirement cannot have both a url and a specifier."
             f" Found: {self.url}, {self.specifier}."
         )
@@ -516,7 +536,11 @@ class LazyRequirement:
             tokens.append(f"[{formatted_extras}]")
 
         distribution_context = context.for_distribution(self.distribution)
-        specifier = await self.specifier.resolve(distribution_context)
+        specifier = (
+            (await self.specifier.resolve(distribution_context))
+            if self.specifier
+            else SpecifierSet()
+        )
         tokens.append(str(specifier))
 
         if self.url:
@@ -534,7 +558,7 @@ EMPTY_REQUIREMENT: Final[LazyRequirement] = LazyRequirement(
     distribution=None,
     url=None,
     extras=frozenset(),
-    specifier=LazySpecifierSet(frozenset()),
+    specifier=None,
     marker=None,
 )
 """
@@ -574,7 +598,9 @@ def get_lazy_requirement(requirement: AnyRequirement) -> LazyRequirement:
             distribution=requirement.name,
             url=requirement.url,
             extras=frozenset(requirement.extras),
-            specifier=get_lazy_specifier_set(requirement.specifier),
+            specifier=get_lazy_specifier_set(requirement.specifier)
+            if requirement.specifier
+            else None,
             marker=requirement.marker,
         )
     if isinstance(requirement, LazyRequirement):
@@ -626,7 +652,12 @@ def compose(lhs: AnyRequirement, rhs: AnyRequirement) -> LazySpecifierSet | Lazy
         distribution = lhr.distribution or rhr.distribution
         url = lhr.url or rhr.url
         extras = frozenset(chain(lhr.extras, rhr.extras))
-        specifier = compose(lhr.specifier, rhr.specifier)
+        if lhr.specifier is None:
+            specifier = rhr.specifier
+        elif rhr.specifier is None:
+            specifier = lhr.specifier
+        else:
+            specifier = compose(lhr.specifier, rhr.specifier)
         marker: Marker | None
         if lhr.marker is None:
             marker = rhr.marker
@@ -646,7 +677,18 @@ def compose(lhs: AnyRequirement, rhs: AnyRequirement) -> LazySpecifierSet | Lazy
     else:
         lhss = get_lazy_specifier_set(lhs)
         rhss = get_lazy_specifier_set(rhs)
-        return LazySpecifierSet(frozenset(chain(lhss.specifiers, rhss.specifiers)))
+        if isinstance(lhss, EagerLazySpecifierSet) and isinstance(rhss, EagerLazySpecifierSet):
+            return EagerLazySpecifierSet(frozenset(chain(lhss.specifiers, rhss.specifiers)))
+        specifiers: list[LazySpecifierSet] = []
+        if isinstance(lhss, CompositeLazySpecifierSet):
+            specifiers.extend(lhss.specifiers)
+        else:
+            specifiers.append(lhss)
+        if isinstance(rhss, CompositeLazySpecifierSet):
+            specifiers.extend(rhss.specifiers)
+        else:
+            specifiers.append(rhss)
+        return CompositeLazySpecifierSet(frozenset(specifiers))
 
 
 class LazyRequirementSet(ABC):
