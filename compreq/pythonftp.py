@@ -6,7 +6,8 @@ from __future__ import annotations
 import datetime as dt
 import re
 from abc import ABC, abstractmethod
-from typing import Mapping, NewType
+from collections.abc import Mapping
+from typing import NewType
 
 import requests
 from bs4 import BeautifulSoup, NavigableString, Tag

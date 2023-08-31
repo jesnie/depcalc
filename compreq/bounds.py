@@ -1,5 +1,5 @@
+from collections.abc import Set
 from dataclasses import dataclass
-from typing import AbstractSet
 
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version
@@ -29,7 +29,7 @@ class Bounds:
     lower_inclusive: bool
     """Whether the lower bound is inclusive."""
 
-    exclusions: AbstractSet[Version]
+    exclusions: Set[Version]
     """Set of specific versions that are disallowed."""
 
     def minimal_specifier_set(self, exclusions: bool = True) -> SpecifierSet:

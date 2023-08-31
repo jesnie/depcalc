@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Set
+from collections.abc import Collection, Iterator, Set
 from dataclasses import dataclass, replace
-from typing import Any, Collection, Iterator
+from typing import Any
 
 from packaging.version import Version
 

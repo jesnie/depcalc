@@ -1,4 +1,4 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 from compreq.lazy import AnyReleaseSet
 from compreq.releases import ReleaseSet
