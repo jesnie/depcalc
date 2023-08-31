@@ -3,8 +3,8 @@ from compreq.classifiers import get_python_classifiers, set_python_classifiers
 from compreq.contexts import (
     Context,
     DefaultContext,
-    DefaultPackageContext,
-    PackageContext,
+    DefaultDistributionContext,
+    DistributionContext,
 )
 from compreq.io.poetry import PoetryPyprojectFile
 from compreq.io.pyproject import PyprojectFile
@@ -76,6 +76,8 @@ from compreq.operators import (
     consistent_lower_bounds,
     count,
     devreleases,
+    dist,
+    distribution,
     extra,
     floor_ver,
     marker,
@@ -85,8 +87,6 @@ from compreq.operators import (
     min_age,
     min_ver,
     minimum_ver,
-    package,
-    pkg,
     prereleases,
     releases,
     requirements,
@@ -113,7 +113,7 @@ from compreq.rounding import ceil, floor
 from compreq.time import UtcDatetime, is_utc_datetime, utc_now
 from compreq.versiontokens import VersionToken
 from compreq.virtualenv import (
-    DistMetadata,
+    DistributionMetadata,
     VirtualEnv,
     create_venv,
     remove_venv,
@@ -141,8 +141,9 @@ __all__ = [
     "Context",
     "CountLazyReleaseSet",
     "DefaultContext",
-    "DefaultPackageContext",
-    "DistMetadata",
+    "DefaultDistributionContext",
+    "DistributionContext",
+    "DistributionMetadata",
     "EMPTY_REQUIREMENT",
     "EagerLazyRelease",
     "EagerLazyReleaseSet",
@@ -171,7 +172,6 @@ __all__ = [
     "MinLazyRelease",
     "MinimumLazyVersion",
     "PYTHON_FTP_ROOT",
-    "PackageContext",
     "PoetryPyprojectFile",
     "PreLazyReleaseSet",
     "ProdLazyReleaseSet",
@@ -200,6 +200,8 @@ __all__ = [
     "count",
     "create_venv",
     "devreleases",
+    "dist",
+    "distribution",
     "extra",
     "floor",
     "floor_ver",
@@ -227,8 +229,6 @@ __all__ = [
     "min_age",
     "min_ver",
     "minimum_ver",
-    "package",
-    "pkg",
     "prereleases",
     "releases",
     "remove_venv",

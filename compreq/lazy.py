@@ -13,24 +13,24 @@ from packaging.requirements import Requirement
 from packaging.specifiers import Specifier, SpecifierSet
 from packaging.version import Version
 
-from compreq.contexts import Context, PackageContext
+from compreq.contexts import Context, DistributionContext
 from compreq.releases import Release, ReleaseSet
 from compreq.requirements import RequirementSet
 
 
 class LazyRelease(ABC):
-    """Strategy for computing a `Release` in the context of a package."""
+    """Strategy for computing a `Release` in the context of a distribution."""
 
     @abstractmethod
-    def get_package(self) -> str | None:
+    def get_distribution(self) -> str | None:
         """
-        Return the package of this `LazyRelease`, if possible.
+        Return the distribution of this `LazyRelease`, if possible.
 
-        Returns `None` if the package cannot be determined without resolving the `LazyRelease`.
+        Returns `None` if the distribution cannot be determined without resolving the `LazyRelease`.
         """
 
     @abstractmethod
-    async def resolve(self, context: PackageContext) -> Release:
+    async def resolve(self, context: DistributionContext) -> Release:
         """Compute the `Release`."""
 
 
@@ -40,10 +40,10 @@ class EagerLazyRelease(LazyRelease):
 
     release: Release
 
-    def get_package(self) -> str | None:
-        return self.release.package
+    def get_distribution(self) -> str | None:
+        return self.release.distribution
 
-    async def resolve(self, context: PackageContext) -> Release:
+    async def resolve(self, context: DistributionContext) -> Release:
         return self.release
 
 
@@ -61,18 +61,19 @@ def get_lazy_release(release: AnyRelease) -> LazyRelease:
 
 
 class LazyReleaseSet(ABC):
-    """Strategy for computing a `ReleaseSet` in the context of a package."""
+    """Strategy for computing a `ReleaseSet` in the context of a distribution."""
 
     @abstractmethod
-    def get_package(self) -> str | None:
+    def get_distribution(self) -> str | None:
         """
-        Return the package of this `LazyReleaseSet`, if possible.
+        Return the distribution of this `LazyReleaseSet`, if possible.
 
-        Returns `None` if the package cannot be determined without resolving the `LazyReleaseSet`.
+        Returns `None` if the distribution cannot be determined without resolving the
+        `LazyReleaseSet`.
         """
 
     @abstractmethod
-    async def resolve(self, context: PackageContext) -> ReleaseSet:
+    async def resolve(self, context: DistributionContext) -> ReleaseSet:
         """Compute the `ReleaseSet`."""
 
 
@@ -82,33 +83,33 @@ class EagerLazyReleaseSet(LazyReleaseSet):
 
     releases: frozenset[LazyRelease]
 
-    def get_package(self) -> str | None:
-        packages = {r.get_package() for r in self.releases}
-        if not packages:
+    def get_distribution(self) -> str | None:
+        distributions = {r.get_distribution() for r in self.releases}
+        if not distributions:
             return None
-        (package,) = packages
-        return package
+        (distribution,) = distributions
+        return distribution
 
-    async def resolve(self, context: PackageContext) -> ReleaseSet:
+    async def resolve(self, context: DistributionContext) -> ReleaseSet:
         releases = await asyncio.gather(*[r.resolve(context) for r in self.releases])
-        return ReleaseSet(context.package, frozenset(releases))
+        return ReleaseSet(context.distribution, frozenset(releases))
 
 
 @dataclass(order=True, frozen=True)
 class AllLazyReleaseSet(LazyReleaseSet):
-    """`LazyReleaseSet` that returns all releases of a given package."""
+    """`LazyReleaseSet` that returns all releases of a given distribution."""
 
-    package: str | None
+    distribution: str | None
     """
-    The package to get releases from. If `None`, the package of the context is used.
+    The distribution to get releases from. If `None`, the distribution of the context is used.
     """
 
-    def get_package(self) -> str | None:
-        return self.package
+    def get_distribution(self) -> str | None:
+        return self.distribution
 
-    async def resolve(self, context: PackageContext) -> ReleaseSet:
-        package = self.package or context.package
-        return await context.releases(package)
+    async def resolve(self, context: DistributionContext) -> ReleaseSet:
+        distribution = self.distribution or context.distribution
+        return await context.releases(distribution)
 
 
 @dataclass(order=True, frozen=True)
@@ -120,13 +121,13 @@ class ProdLazyReleaseSet(LazyReleaseSet):
 
     source: LazyReleaseSet
 
-    def get_package(self) -> str | None:
-        return self.source.get_package()
+    def get_distribution(self) -> str | None:
+        return self.source.get_distribution()
 
-    async def resolve(self, context: PackageContext) -> ReleaseSet:
+    async def resolve(self, context: DistributionContext) -> ReleaseSet:
         release_set = await self.source.resolve(context)
         return ReleaseSet(
-            package=release_set.package,
+            distribution=release_set.distribution,
             releases=frozenset(
                 r for r in release_set if not (r.version.is_prerelease or r.version.is_devrelease)
             ),
@@ -142,13 +143,13 @@ class PreLazyReleaseSet(LazyReleaseSet):
 
     source: LazyReleaseSet
 
-    def get_package(self) -> str | None:
-        return self.source.get_package()
+    def get_distribution(self) -> str | None:
+        return self.source.get_distribution()
 
-    async def resolve(self, context: PackageContext) -> ReleaseSet:
+    async def resolve(self, context: DistributionContext) -> ReleaseSet:
         release_set = await self.source.resolve(context)
         return ReleaseSet(
-            package=release_set.package,
+            distribution=release_set.distribution,
             releases=frozenset(r for r in release_set if not r.version.is_devrelease),
         )
 
@@ -162,16 +163,16 @@ class SpecifierLazyReleaseSet(LazyReleaseSet):
     source: LazyReleaseSet
     specifier_set: LazySpecifierSet
 
-    def get_package(self) -> str | None:
-        return self.source.get_package()
+    def get_distribution(self) -> str | None:
+        return self.source.get_distribution()
 
-    async def resolve(self, context: PackageContext) -> ReleaseSet:
+    async def resolve(self, context: DistributionContext) -> ReleaseSet:
         release_set, specifier_set = await asyncio.gather(
             self.source.resolve(context),
             self.specifier_set.resolve(context),
         )
         return ReleaseSet(
-            package=release_set.package,
+            distribution=release_set.distribution,
             releases=frozenset(r for r in release_set if r.version in specifier_set),
         )
 
@@ -210,7 +211,7 @@ def get_lazy_release_set(release_set: AnyReleaseSet | None) -> LazyReleaseSet:
         release_set = get_lazy_requirement(release_set)
     if isinstance(release_set, LazyRequirement):
         release_set = SpecifierLazyReleaseSet(
-            ProdLazyReleaseSet(AllLazyReleaseSet(release_set.package)), release_set.specifier
+            ProdLazyReleaseSet(AllLazyReleaseSet(release_set.distribution)), release_set.specifier
         )
     if isinstance(release_set, Release):
         release_set = EagerLazyRelease(release_set)
@@ -224,10 +225,10 @@ def get_lazy_release_set(release_set: AnyReleaseSet | None) -> LazyReleaseSet:
 
 
 class LazyVersion(ABC):
-    """Strategy for computing a `Version` in the context of a package."""
+    """Strategy for computing a `Version` in the context of a distribution."""
 
     @abstractmethod
-    async def resolve(self, context: PackageContext) -> Version:
+    async def resolve(self, context: DistributionContext) -> Version:
         """Compute the `Version`."""
 
 
@@ -237,7 +238,7 @@ class EagerLazyVersion(LazyVersion):
 
     version: Version
 
-    async def resolve(self, context: PackageContext) -> Version:
+    async def resolve(self, context: DistributionContext) -> Version:
         return self.version
 
 
@@ -247,7 +248,7 @@ class ReleaseLazyVersion(LazyVersion):
 
     release: LazyRelease
 
-    async def resolve(self, context: PackageContext) -> Version:
+    async def resolve(self, context: DistributionContext) -> Version:
         return (await self.release.resolve(context)).version
 
 
@@ -311,7 +312,7 @@ def get_specifier_operator(op: AnySpecifierOperator) -> SpecifierOperator:
 @dataclass(order=True, frozen=True)
 class LazySpecifier:
     """
-    Strategy for computing a `Specifier` in the context of a package.
+    Strategy for computing a `Specifier` in the context of a distribution.
 
     Lazy specifiers can be combined with other specifiers; specifier-sets; and requiremnts using the
     `&` operator::
@@ -322,7 +323,7 @@ class LazySpecifier:
     op: SpecifierOperator
     version: LazyVersion
 
-    async def resolve(self, context: PackageContext) -> Specifier:
+    async def resolve(self, context: DistributionContext) -> Specifier:
         """Compute the `Specifier`."""
         op = self.op
         version = await self.version.resolve(context)
@@ -371,7 +372,7 @@ def get_lazy_specifier(specifier: AnySpecifier) -> LazySpecifier:
 @dataclass(frozen=True)
 class LazySpecifierSet:
     """
-    Strategy for computing a `SpecifierSet` in the context of a package.
+    Strategy for computing a `SpecifierSet` in the context of a distribution.
 
     Lazy specifier-sets can be combined with specifiers; other specifier-sets; and requiremnts using
     the `&` operator::
@@ -382,7 +383,7 @@ class LazySpecifierSet:
 
     specifiers: frozenset[LazySpecifier]
 
-    async def resolve(self, context: PackageContext) -> SpecifierSet:
+    async def resolve(self, context: DistributionContext) -> SpecifierSet:
         """Compute the `SpecifierSet`."""
         specifiers = await asyncio.gather(*[s.resolve(context) for s in self.specifiers])
         return SpecifierSet(",".join(str(s) for s in specifiers))
@@ -450,7 +451,7 @@ class LazyRequirement:
     A `LazyRequirement` can be in a partially configured state. To be valid a `LazyRequirement`
     must:
 
-    * Have a `package` configured.
+    * Have a `distribution` configured.
     * Cannot have both a `url` and a `specifier`.
 
     Lazy requiremnts can be combined with specifiers; specifier-sets; and other requiremnts using
@@ -459,12 +460,12 @@ class LazyRequirement:
         lazy_requirement = lazy_requirement_1 & lazy_requirement_2
     """
 
-    package: str | None
-    """The required package. Required."""
+    distribution: str | None
+    """The required distribution. Required."""
 
     url: str | None
     """
-    The url to download the package at. Use:
+    The url to download the distribution at. Use:
 
     * file:///... to refer to local files.
     * git+https://... to refer to git repositories.
@@ -477,7 +478,7 @@ class LazyRequirement:
 
     specifier: LazySpecifierSet
     """
-    Specification of which versions of the package are valid.
+    Specification of which versions of the distribution are valid.
 
     Mutually exclusize with `url`.
     """
@@ -498,22 +499,24 @@ class LazyRequirement:
         return compose(lhs, self)
 
     def assert_valid(self) -> None:
-        assert self.package, f"A requirement must have the package name set. Found: {self.package}."
+        assert (
+            self.distribution
+        ), f"A requirement must have the distribution name set. Found: {self.distribution}."
 
     async def resolve(self, context: Context) -> Requirement:
         """Compute the `Requirement`."""
         self.assert_valid()
-        assert self.package
+        assert self.distribution
 
         tokens = []
-        tokens.append(self.package)
+        tokens.append(self.distribution)
 
         if self.extras:
             formatted_extras = ",".join(sorted(self.extras))
             tokens.append(f"[{formatted_extras}]")
 
-        package_context = context.for_package(self.package)
-        specifier = await self.specifier.resolve(package_context)
+        distribution_context = context.for_distribution(self.distribution)
+        specifier = await self.specifier.resolve(distribution_context)
         tokens.append(str(specifier))
 
         if self.url:
@@ -528,7 +531,7 @@ class LazyRequirement:
 
 
 EMPTY_REQUIREMENT: Final[LazyRequirement] = LazyRequirement(
-    package=None,
+    distribution=None,
     url=None,
     extras=frozenset(),
     specifier=LazySpecifierSet(frozenset()),
@@ -541,7 +544,7 @@ Useful for constructing partial requirements::
 
     from dataclasses import replace
 
-    replace(EMPTY_REQUIREMENT, package="foo.bar")
+    replace(EMPTY_REQUIREMENT, distribution="foo.bar")
 
 """
 
@@ -568,7 +571,7 @@ def get_lazy_requirement(requirement: AnyRequirement) -> LazyRequirement:
         requirement = replace(EMPTY_REQUIREMENT, specifier=requirement)
     if isinstance(requirement, Requirement):
         requirement = LazyRequirement(
-            package=requirement.name,
+            distribution=requirement.name,
             url=requirement.url,
             extras=frozenset(requirement.extras),
             specifier=get_lazy_specifier_set(requirement.specifier),
@@ -609,14 +612,18 @@ def compose(lhs: AnyRequirement, rhs: AnyRequirement) -> LazySpecifierSet | Lazy
         lhr = get_lazy_requirement(lhs)
         rhr = get_lazy_requirement(rhs)
 
-        assert lhr.package is None or rhr.package is None or lhr.package == rhr.package, (
-            "A requirement can have at most one package name."
-            f" Found: {lhr.package} and {rhr.package}."
+        assert (
+            lhr.distribution is None
+            or rhr.distribution is None
+            or lhr.distribution == rhr.distribution
+        ), (
+            "A requirement can have at most one distribution name."
+            f" Found: {lhr.distribution} and {rhr.distribution}."
         )
         assert (
             lhr.url is None or rhr.url is None or lhr.url == rhr.url
         ), f"A requirement can have at most one url. Found: {lhr.url} and {rhr.url}."
-        package = lhr.package or rhr.package
+        distribution = lhr.distribution or rhr.distribution
         url = lhr.url or rhr.url
         extras = frozenset(chain(lhr.extras, rhr.extras))
         specifier = compose(lhr.specifier, rhr.specifier)
@@ -630,7 +637,7 @@ def compose(lhs: AnyRequirement, rhs: AnyRequirement) -> LazySpecifierSet | Lazy
         else:
             marker = Marker(f"({lhr.marker}) and ({rhr.marker})")
         return LazyRequirement(
-            package=package,
+            distribution=distribution,
             url=url,
             extras=extras,
             specifier=specifier,

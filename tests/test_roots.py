@@ -7,6 +7,7 @@ from packaging.version import Version
 from compreq import (
     CompReq,
     Context,
+    DistributionContext,
     LazyRelease,
     LazyReleaseSet,
     LazyRequirement,
@@ -14,7 +15,6 @@ from compreq import (
     LazySpecifier,
     LazySpecifierSet,
     LazyVersion,
-    PackageContext,
     RequirementSet,
 )
 from tests.utils import fake_release, fake_release_set
@@ -36,40 +36,40 @@ def test_comp_req__for_python() -> None:
 
 def test_comp_req__resolve_release() -> None:
     context = MagicMock(Context)
-    pcontext = MagicMock(PackageContext)
-    context.for_package.return_value = pcontext
+    dcontext = MagicMock(DistributionContext)
+    context.for_distribution.return_value = dcontext
 
-    release = fake_release(package="foo.bar", version="1.2.3")
+    release = fake_release(distribution="foo.bar", version="1.2.3")
     lazy = MagicMock(LazyRelease)
     lazy.resolve.return_value = release
 
     cr = CompReq(context=context)
 
     assert release == cr.resolve_release("foo.bar", lazy)
-    lazy.resolve.assert_called_once_with(pcontext)
-    context.for_package.assert_called_once_with("foo.bar")
+    lazy.resolve.assert_called_once_with(dcontext)
+    context.for_distribution.assert_called_once_with("foo.bar")
 
 
 def test_comp_req__resolve_release_set() -> None:
     context = MagicMock(Context)
-    pcontext = MagicMock(PackageContext)
-    context.for_package.return_value = pcontext
+    dcontext = MagicMock(DistributionContext)
+    context.for_distribution.return_value = dcontext
 
-    release_set = fake_release_set(package="foo.bar", releases=["1.2.3", "1.2.4", "1.2.5"])
+    release_set = fake_release_set(distribution="foo.bar", releases=["1.2.3", "1.2.4", "1.2.5"])
     lazy = MagicMock(LazyReleaseSet)
     lazy.resolve.return_value = release_set
 
     cr = CompReq(context=context)
 
     assert release_set == cr.resolve_release_set("foo.bar", lazy)
-    lazy.resolve.assert_called_once_with(pcontext)
-    context.for_package.assert_called_once_with("foo.bar")
+    lazy.resolve.assert_called_once_with(dcontext)
+    context.for_distribution.assert_called_once_with("foo.bar")
 
 
 def test_comp_req__resolve_version() -> None:
     context = MagicMock(Context)
-    pcontext = MagicMock(PackageContext)
-    context.for_package.return_value = pcontext
+    dcontext = MagicMock(DistributionContext)
+    context.for_distribution.return_value = dcontext
 
     version = Version("1.2.3")
     lazy = MagicMock(LazyVersion)
@@ -78,14 +78,14 @@ def test_comp_req__resolve_version() -> None:
     cr = CompReq(context=context)
 
     assert version == cr.resolve_version("foo.bar", lazy)
-    lazy.resolve.assert_called_once_with(pcontext)
-    context.for_package.assert_called_once_with("foo.bar")
+    lazy.resolve.assert_called_once_with(dcontext)
+    context.for_distribution.assert_called_once_with("foo.bar")
 
 
 def test_comp_req__resolve_specifier() -> None:
     context = MagicMock(Context)
-    pcontext = MagicMock(PackageContext)
-    context.for_package.return_value = pcontext
+    dcontext = MagicMock(DistributionContext)
+    context.for_distribution.return_value = dcontext
 
     specifier = Specifier("~=1.2.3")
     lazy = MagicMock(LazySpecifier)
@@ -94,14 +94,14 @@ def test_comp_req__resolve_specifier() -> None:
     cr = CompReq(context=context)
 
     assert specifier == cr.resolve_specifier("foo.bar", lazy)
-    lazy.resolve.assert_called_once_with(pcontext)
-    context.for_package.assert_called_once_with("foo.bar")
+    lazy.resolve.assert_called_once_with(dcontext)
+    context.for_distribution.assert_called_once_with("foo.bar")
 
 
 def test_comp_req__resolve_specifier_set() -> None:
     context = MagicMock(Context)
-    pcontext = MagicMock(PackageContext)
-    context.for_package.return_value = pcontext
+    dcontext = MagicMock(DistributionContext)
+    context.for_distribution.return_value = dcontext
 
     specifier_set = SpecifierSet("<2.0.0,>=1.2.3")
     lazy = MagicMock(LazySpecifierSet)
@@ -110,8 +110,8 @@ def test_comp_req__resolve_specifier_set() -> None:
     cr = CompReq(context=context)
 
     assert specifier_set == cr.resolve_specifier_set("foo.bar", lazy)
-    lazy.resolve.assert_called_once_with(pcontext)
-    context.for_package.assert_called_once_with("foo.bar")
+    lazy.resolve.assert_called_once_with(dcontext)
+    context.for_distribution.assert_called_once_with("foo.bar")
 
 
 def test_comp_req__resolve_requirement() -> None:

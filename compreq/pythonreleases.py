@@ -42,7 +42,7 @@ async def get_python_releases(python_specifiers: SpecifierSet) -> ReleaseSet:
     def _get_releases(release_dir: FtpDir) -> set[Release]:
         return {
             Release(
-                package="python",
+                distribution="python",
                 version=parse(match[1]),
                 released_time=path.modified,
                 successor=None,  # Set by infer_and_set_successor

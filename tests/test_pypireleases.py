@@ -9,10 +9,10 @@ from tests.utils import assert_release_set, utc
 
 
 async def test_pypireleases(monkeypatch: pytest.MonkeyPatch) -> None:
-    package = "foo.bar"
+    distribution = "foo.bar"
 
     def fake_requests_get(url: str, timeout: float) -> Any:
-        assert url == f"https://pypi.org/pypi/{package}/json"
+        assert url == f"https://pypi.org/pypi/{distribution}/json"
         reply = MagicMock()
         reply.json.return_value = {
             "releases": {
@@ -52,11 +52,11 @@ async def test_pypireleases(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("compreq.pythonftp.requests.get", fake_requests_get)
 
     assert_release_set(
-        package,
+        distribution,
         [
             ("1.2.3", utc(dt.datetime(2023, 8, 23, 9, 3)), "1.2.6"),
             ("1.2.4a1", utc(dt.datetime(2023, 8, 23, 9, 4)), "1.2.6"),
             ("1.2.6", utc(dt.datetime(2023, 8, 23, 9, 7)), None),
         ],
-        await get_pypi_releases(package),
+        await get_pypi_releases(distribution),
     )

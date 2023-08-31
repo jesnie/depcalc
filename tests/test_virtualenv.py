@@ -9,7 +9,7 @@ from packaging.version import Version
 from pytest import MonkeyPatch
 
 import compreq as cr
-from compreq.scripts import get_dist_metadata
+from compreq.scripts import get_distribution_metadata
 
 
 @pytest.fixture(autouse=True)
@@ -162,7 +162,7 @@ async def test_virtual_env__install__no_deps(_mock_run: MagicMock) -> None:
     )
 
 
-async def test_virtual_env__package_metadata(_mock_run: MagicMock) -> None:
+async def test_virtual_env__distribution_metadata(_mock_run: MagicMock) -> None:
     _mock_run.stdout_bytes = b"""{
   "name": "foo.bar",
   "version": "1.2.3",
@@ -175,8 +175,8 @@ async def test_virtual_env__package_metadata(_mock_run: MagicMock) -> None:
 """
 
     venv = cr.VirtualEnv("/home/jesper/venv")
-    assert cr.DistMetadata(
-        package="foo.bar",
+    assert cr.DistributionMetadata(
+        distribution="foo.bar",
         version=Version("1.2.3"),
         requires=cr.RequirementSet.new(
             [
@@ -185,9 +185,9 @@ async def test_virtual_env__package_metadata(_mock_run: MagicMock) -> None:
                 Requirement("bar<2.0,>=1.0"),
             ]
         ),
-    ) == await venv.package_metadata("foo.bar")
+    ) == await venv.distribution_metadata("foo.bar")
     _mock_run.assert_called_once_with(
-        f". /home/jesper/venv/bin/activate && python {get_dist_metadata.__file__} foo.bar",
+        f". /home/jesper/venv/bin/activate && python {get_distribution_metadata.__file__} foo.bar",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
     )

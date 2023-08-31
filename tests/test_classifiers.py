@@ -7,7 +7,7 @@ from tests.utils import fake_release_set
 def test_set_python_classifiers() -> None:
     cr = MagicMock(CompReq)
     python_releases = fake_release_set(
-        package="python",
+        distribution="python",
         releases=[
             # NOT sorted:
             "2.6.1",

@@ -202,7 +202,7 @@ classifiers = [
 
     cr = MagicMock(CompReq)
     python_releases = fake_release_set(
-        package="python",
+        distribution="python",
         releases=[
             # NOT sorted:
             "2.6.1",

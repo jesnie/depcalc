@@ -12,15 +12,15 @@ from compreq.releases import ReleaseSet
 from compreq.time import UtcDatetime, is_utc_datetime, utc_now
 
 
-class PackageContext(ABC):
+class DistributionContext(ABC):
     """
-    A context for resolving values related to a given package.
+    A context for resolving values related to a given distribution.
     """
 
     @property
     @abstractmethod
-    def package(self) -> str:
-        """The package values should be resolved relative to."""
+    def distribution(self) -> str:
+        """The distribution values should be resolved relative to."""
 
     @property
     @abstractmethod
@@ -38,8 +38,8 @@ class PackageContext(ABC):
         """The "current" time."""
 
     @abstractmethod
-    async def releases(self, package: str) -> ReleaseSet:
-        """Fetch all releases of `package`."""
+    async def releases(self, distribution: str) -> ReleaseSet:
+        """Fetch all releases of `distribution`."""
 
 
 class Context(ABC):
@@ -69,24 +69,24 @@ class Context(ABC):
         """
 
     @abstractmethod
-    def for_package(self, package: str) -> PackageContext:
-        """Create a new context for the given package."""
+    def for_distribution(self, distribution: str) -> DistributionContext:
+        """Create a new context for the given distribution."""
 
     @abstractmethod
-    async def releases(self, package: str) -> ReleaseSet:
-        """Fetch all releases of `package`."""
+    async def releases(self, distribution: str) -> ReleaseSet:
+        """Fetch all releases of `distribution`."""
 
 
-class DefaultPackageContext(PackageContext):
-    """Default implementation of `PackageContext`."""
+class DefaultDistributionContext(DistributionContext):
+    """Default implementation of `DistributionContext`."""
 
-    def __init__(self, parent: Context, package: str) -> None:
+    def __init__(self, parent: Context, distribution: str) -> None:
         self._parent = parent
-        self._package = package
+        self._distribution = distribution
 
     @property
-    def package(self) -> str:
-        return self._package
+    def distribution(self) -> str:
+        return self._distribution
 
     @property
     def default_python(self) -> Version:
@@ -100,8 +100,8 @@ class DefaultPackageContext(PackageContext):
     def now(self) -> UtcDatetime:
         return self._parent.now
 
-    async def releases(self, package: str) -> ReleaseSet:
-        return await self._parent.releases(package)
+    async def releases(self, distribution: str) -> ReleaseSet:
+        return await self._parent.releases(distribution)
 
 
 class DefaultContext(Context):
@@ -156,11 +156,11 @@ class DefaultContext(Context):
             python_specifier=python_specifier, default_python=default_python, now=self._now
         )
 
-    def for_package(self, package: str) -> DefaultPackageContext:
-        return DefaultPackageContext(self, package)
+    def for_distribution(self, distribution: str) -> DefaultDistributionContext:
+        return DefaultDistributionContext(self, distribution)
 
-    async def releases(self, package: str) -> ReleaseSet:
-        if package == "python":
+    async def releases(self, distribution: str) -> ReleaseSet:
+        if distribution == "python":
             return await get_python_releases(self._python_specifier)
         else:
-            return await get_pypi_releases(package)
+            return await get_pypi_releases(distribution)
