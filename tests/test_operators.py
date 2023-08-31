@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from packaging.requirements import Requirement
+from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 from pytest import MonkeyPatch
 
@@ -26,7 +27,7 @@ def test_version() -> None:
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(),
-                specifier=cr.LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
         ),
@@ -36,7 +37,7 @@ def test_version() -> None:
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(),
-                specifier=cr.LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
         ),
@@ -46,7 +47,7 @@ def test_version() -> None:
                 distribution=None,
                 url="http://path/v1.2.3",
                 extras=frozenset(),
-                specifier=cr.LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
         ),
@@ -56,7 +57,7 @@ def test_version() -> None:
                 distribution=None,
                 url=None,
                 extras=frozenset(["extra"]),
-                specifier=cr.LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
         ),
@@ -74,7 +75,7 @@ def test_version() -> None:
                 distribution=None,
                 url=None,
                 extras=frozenset(),
-                specifier=cr.LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=cr.get_marker("python_version=='1.2.3'"),
             ),
         ),
@@ -97,6 +98,22 @@ def test_prereleases() -> None:
 def test_devreleases() -> None:
     assert cr.AllLazyReleaseSet(None) == cr.devreleases()
     assert cr.AllLazyReleaseSet("foo.bar") == cr.devreleases("foo.bar")
+
+
+async def test_default_python() -> None:
+    default_python = Version("3.11.4")
+    context = MagicMock(cr.DistributionContext)
+    context.default_python = default_python
+    lazy = cr.default_python()
+    assert default_python == await lazy.resolve(context)
+
+
+async def test_python_specifier() -> None:
+    python_specifier = SpecifierSet("<4,>=3.8")
+    context = MagicMock(cr.DistributionContext)
+    context.python_specifier = python_specifier
+    lazy = cr.python_specifier()
+    assert python_specifier == await lazy.resolve(context)
 
 
 @pytest.mark.parametrize(

@@ -4,7 +4,7 @@ import compreq as cr
 
 
 def set_python_version_in_github_actions(comp_req: cr.CompReq) -> None:
-    python_release_set = comp_req.resolve_release_set("python", comp_req.python_specifier)
+    python_release_set = comp_req.resolve_release_set("python", cr.python_specifier())
     minor_versions = sorted(
         set(cr.floor(cr.MINOR, r.version, keep_trailing_zeros=False) for r in python_release_set)
     )
@@ -26,7 +26,7 @@ def set_python_version(comp_req: cr.CompReq, pyproject: cr.PoetryPyprojectFile) 
 
     pyproject.set_python_classifiers(comp_req)
     set_python_version_in_github_actions(comp_req)
-    version = comp_req.default_python
+    version = comp_req.resolve_version("python", cr.default_python())
 
     tool = pyproject.toml["tool"]
     tool["isort"]["py_version"] = int(f"{version.major}{version.minor}")
@@ -65,7 +65,7 @@ def main() -> None:
                     cr.dist("beautifulsoup4") & default_range,
                     cr.dist("packaging") & default_range,
                     cr.dist("pip") & default_range,
-                    cr.dist("python") & comp_req.python_specifier,
+                    cr.dist("python") & cr.python_specifier(),
                     cr.dist("python-dateutil") & default_range,
                     cr.dist("requests") & default_range,
                     cr.dist("tomlkit") & default_range,

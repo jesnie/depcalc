@@ -168,6 +168,32 @@ def devreleases(
 
 
 @dataclass(order=True, frozen=True)
+class DefaultPythonLazyVersion(LazyVersion):
+    """Which version of Python to use while computing requirements."""
+
+    async def resolve(self, context: DistributionContext) -> Version:
+        return context.default_python
+
+
+def default_python() -> LazyVersion:
+    """Which version of Python to use while computing requirements."""
+    return DefaultPythonLazyVersion()
+
+
+@dataclass(order=True, frozen=True)
+class PythonSpecifierLazySpecifierSet(LazySpecifierSet):
+    """Which versions of Python are allowed."""
+
+    async def resolve(self, context: DistributionContext) -> SpecifierSet:
+        return context.python_specifier
+
+
+def python_specifier() -> LazySpecifierSet:
+    """Which versions of Python are allowed."""
+    return PythonSpecifierLazySpecifierSet()
+
+
+@dataclass(order=True, frozen=True)
 class MinLazyRelease(LazyRelease):
     """
     Strategy for getting the release with the minimal version.

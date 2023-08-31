@@ -8,55 +8,14 @@ from packaging.specifiers import Specifier, SpecifierSet
 from packaging.version import Version
 
 import compreq as cr
-from compreq import (
-    AllLazyReleaseSet,
-    AnyMarker,
-    AnyRelease,
-    AnyReleaseSet,
-    AnyRequirement,
-    AnyRequirementSet,
-    AnySpecifier,
-    AnySpecifierOperator,
-    AnySpecifierSet,
-    AnyVersion,
-    Context,
-    DistributionContext,
-    EagerLazyRelease,
-    EagerLazyReleaseSet,
-    EagerLazyRequirementSet,
-    EagerLazyVersion,
-    LazyRelease,
-    LazyReleaseSet,
-    LazyRequirement,
-    LazyRequirementSet,
-    LazySpecifier,
-    LazySpecifierSet,
-    LazyVersion,
-    PreLazyReleaseSet,
-    ProdLazyReleaseSet,
-    ReleaseLazyVersion,
-    ReleaseSet,
-    RequirementSet,
-    SpecifierLazyReleaseSet,
-    SpecifierOperator,
-    get_lazy_release,
-    get_lazy_release_set,
-    get_lazy_requirement,
-    get_lazy_requirement_set,
-    get_lazy_specifier,
-    get_lazy_specifier_set,
-    get_lazy_version,
-    get_marker,
-    get_specifier_operator,
-)
 from tests.utils import fake_release, fake_release_set
 
 
 async def test_eager_lazy_release() -> None:
     release = fake_release()
-    lazy = EagerLazyRelease(release)
+    lazy = cr.EagerLazyRelease(release)
 
-    context = MagicMock(DistributionContext)
+    context = MagicMock(cr.DistributionContext)
     assert "foo.bar" == lazy.get_distribution()
     assert release == await lazy.resolve(context)
 
@@ -66,39 +25,41 @@ async def test_eager_lazy_release() -> None:
     [
         (
             fake_release(version="1.1.0"),
-            EagerLazyRelease(fake_release(version="1.1.0")),
+            cr.EagerLazyRelease(fake_release(version="1.1.0")),
         ),
         (
-            EagerLazyRelease(fake_release(version="1.2.0")),
-            EagerLazyRelease(fake_release(version="1.2.0")),
+            cr.EagerLazyRelease(fake_release(version="1.2.0")),
+            cr.EagerLazyRelease(fake_release(version="1.2.0")),
         ),
     ],
 )
-def test_get_lazy_release(release: AnyRelease, expected: LazyRelease) -> None:
-    assert expected == get_lazy_release(release)
+def test_get_lazy_release(release: cr.AnyRelease, expected: cr.LazyRelease) -> None:
+    assert expected == cr.get_lazy_release(release)
 
 
 async def test_eager_lazy_release_set__empty() -> None:
-    lazy = EagerLazyReleaseSet(frozenset())
-    context = MagicMock(DistributionContext)
+    lazy = cr.EagerLazyReleaseSet(frozenset())
+    context = MagicMock(cr.DistributionContext)
     context.distribution = "foo.bar"
 
     assert lazy.get_distribution() is None
-    assert ReleaseSet("foo.bar", frozenset()) == await lazy.resolve(context)
+    assert cr.ReleaseSet("foo.bar", frozenset()) == await lazy.resolve(context)
 
 
 async def test_eager_lazy_release_set() -> None:
     release_2 = fake_release(version="1.2.0")
     release_1 = fake_release(version="1.1.0", successor=release_2)
 
-    lazy = EagerLazyReleaseSet(
-        frozenset([get_lazy_release(release_1), get_lazy_release(release_2)])
+    lazy = cr.EagerLazyReleaseSet(
+        frozenset([cr.get_lazy_release(release_1), cr.get_lazy_release(release_2)])
     )
-    context = MagicMock(DistributionContext)
+    context = MagicMock(cr.DistributionContext)
     context.distribution = "foo.bar"
 
     assert "foo.bar" == lazy.get_distribution()
-    assert ReleaseSet("foo.bar", frozenset([release_1, release_2])) == await lazy.resolve(context)
+    assert cr.ReleaseSet("foo.bar", frozenset([release_1, release_2])) == await lazy.resolve(
+        context
+    )
 
 
 async def test_all_lazy_release_set() -> None:
@@ -106,8 +67,8 @@ async def test_all_lazy_release_set() -> None:
         releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
     )
 
-    lazy = AllLazyReleaseSet(None)
-    context = MagicMock(DistributionContext)
+    lazy = cr.AllLazyReleaseSet(None)
+    context = MagicMock(cr.DistributionContext)
     context.distribution = "foo.bar"
     context.releases.return_value = releases
 
@@ -123,8 +84,8 @@ async def test_all_lazy_release_set__distribution() -> None:
         distribution="foo", releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
     )
 
-    lazy = AllLazyReleaseSet("foo")
-    context = MagicMock(DistributionContext)
+    lazy = cr.AllLazyReleaseSet("foo")
+    context = MagicMock(cr.DistributionContext)
     context.distribution = "foo.bar"
     context.releases.return_value = releases
 
@@ -144,12 +105,12 @@ async def test_prod_lazy_release_set() -> None:
     releases = fake_release_set(
         releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
     )
-    source = MagicMock(LazyReleaseSet)
+    source = MagicMock(cr.LazyReleaseSet)
     source.get_distribution.return_value = "foo"
     source.resolve.return_value = releases
-    context = MagicMock(DistributionContext)
+    context = MagicMock(cr.DistributionContext)
 
-    lazy = ProdLazyReleaseSet(source)
+    lazy = cr.ProdLazyReleaseSet(source)
 
     assert "foo" == lazy.get_distribution()
     assert fake_release_set(releases=["1.2.0", "1.3.0"]) == await lazy.resolve(context)
@@ -160,12 +121,12 @@ async def test_pre_lazy_release_set() -> None:
     releases = fake_release_set(
         releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
     )
-    source = MagicMock(LazyReleaseSet)
+    source = MagicMock(cr.LazyReleaseSet)
     source.get_distribution.return_value = "foo"
     source.resolve.return_value = releases
-    context = MagicMock(DistributionContext)
+    context = MagicMock(cr.DistributionContext)
 
-    lazy = PreLazyReleaseSet(source)
+    lazy = cr.PreLazyReleaseSet(source)
 
     assert "foo" == lazy.get_distribution()
     assert fake_release_set(releases=["1.2.0", "1.3.0.rc1", "1.3.0"]) == await lazy.resolve(context)
@@ -177,12 +138,12 @@ async def test_specifier_lazy_release_set() -> None:
         releases=["1.2.0", "1.2.1", "1.3.0", "1.3.1", "1.4.0", "2.0.0", "2.1.0"],
         infer_successors=False,
     )
-    source = MagicMock(LazyReleaseSet)
+    source = MagicMock(cr.LazyReleaseSet)
     source.get_distribution.return_value = "foo"
     source.resolve.return_value = releases
-    context = MagicMock(DistributionContext)
+    context = MagicMock(cr.DistributionContext)
 
-    lazy = SpecifierLazyReleaseSet(source, get_lazy_specifier_set(">=1.3.0,<2.0.0"))
+    lazy = cr.SpecifierLazyReleaseSet(source, cr.get_lazy_specifier_set(">=1.3.0,<2.0.0"))
 
     assert "foo" == lazy.get_distribution()
     assert fake_release_set(
@@ -197,26 +158,26 @@ async def test_specifier_lazy_release_set() -> None:
     [
         (
             None,
-            ProdLazyReleaseSet(AllLazyReleaseSet(None)),
+            cr.ProdLazyReleaseSet(cr.AllLazyReleaseSet(None)),
         ),
         (
             "foo.bar",
-            ProdLazyReleaseSet(AllLazyReleaseSet("foo.bar")),
+            cr.ProdLazyReleaseSet(cr.AllLazyReleaseSet("foo.bar")),
         ),
         (
             fake_release(version="1.1.0"),
-            EagerLazyReleaseSet(frozenset([EagerLazyRelease(fake_release(version="1.1.0"))])),
+            cr.EagerLazyReleaseSet(frozenset([cr.EagerLazyRelease(fake_release(version="1.1.0"))])),
         ),
         (
-            EagerLazyRelease(fake_release(version="1.2.0")),
-            EagerLazyReleaseSet(frozenset([EagerLazyRelease(fake_release(version="1.2.0"))])),
+            cr.EagerLazyRelease(fake_release(version="1.2.0")),
+            cr.EagerLazyReleaseSet(frozenset([cr.EagerLazyRelease(fake_release(version="1.2.0"))])),
         ),
         (
-            ReleaseSet("foo.bar", frozenset()),
-            EagerLazyReleaseSet(frozenset()),
+            cr.ReleaseSet("foo.bar", frozenset()),
+            cr.EagerLazyReleaseSet(frozenset()),
         ),
         (
-            ReleaseSet(
+            cr.ReleaseSet(
                 "foo.bar",
                 frozenset(
                     [
@@ -225,152 +186,154 @@ async def test_specifier_lazy_release_set() -> None:
                     ]
                 ),
             ),
-            EagerLazyReleaseSet(
+            cr.EagerLazyReleaseSet(
                 frozenset(
                     [
-                        EagerLazyRelease(fake_release(version="1.3.0")),
-                        EagerLazyRelease(fake_release(version="1.4.0")),
+                        cr.EagerLazyRelease(fake_release(version="1.3.0")),
+                        cr.EagerLazyRelease(fake_release(version="1.4.0")),
                     ]
                 )
             ),
         ),
         (
-            EagerLazyReleaseSet(frozenset()),
-            EagerLazyReleaseSet(frozenset()),
+            cr.EagerLazyReleaseSet(frozenset()),
+            cr.EagerLazyReleaseSet(frozenset()),
         ),
         (
-            EagerLazyReleaseSet(
+            cr.EagerLazyReleaseSet(
                 frozenset(
                     [
-                        EagerLazyRelease(fake_release(version="1.5.0")),
-                        EagerLazyRelease(fake_release(version="1.6.0")),
+                        cr.EagerLazyRelease(fake_release(version="1.5.0")),
+                        cr.EagerLazyRelease(fake_release(version="1.6.0")),
                     ]
                 ),
             ),
-            EagerLazyReleaseSet(
+            cr.EagerLazyReleaseSet(
                 frozenset(
                     [
-                        EagerLazyRelease(fake_release(version="1.5.0")),
-                        EagerLazyRelease(fake_release(version="1.6.0")),
+                        cr.EagerLazyRelease(fake_release(version="1.5.0")),
+                        cr.EagerLazyRelease(fake_release(version="1.6.0")),
                     ]
                 )
             ),
         ),
         (
             Specifier("==1.7.0"),
-            SpecifierLazyReleaseSet(
-                ProdLazyReleaseSet(AllLazyReleaseSet(None)),
-                get_lazy_specifier_set("==1.7.0"),
+            cr.SpecifierLazyReleaseSet(
+                cr.ProdLazyReleaseSet(cr.AllLazyReleaseSet(None)),
+                cr.get_lazy_specifier_set("==1.7.0"),
             ),
         ),
         (
-            get_lazy_specifier("==1.8.0"),
-            SpecifierLazyReleaseSet(
-                ProdLazyReleaseSet(AllLazyReleaseSet(None)),
-                get_lazy_specifier_set("==1.8.0"),
+            cr.get_lazy_specifier("==1.8.0"),
+            cr.SpecifierLazyReleaseSet(
+                cr.ProdLazyReleaseSet(cr.AllLazyReleaseSet(None)),
+                cr.get_lazy_specifier_set("==1.8.0"),
             ),
         ),
         (
             SpecifierSet(">=1.9.1,<2.0.0"),
-            SpecifierLazyReleaseSet(
-                ProdLazyReleaseSet(AllLazyReleaseSet(None)),
-                get_lazy_specifier_set(">=1.9.1,<2.0.0"),
+            cr.SpecifierLazyReleaseSet(
+                cr.ProdLazyReleaseSet(cr.AllLazyReleaseSet(None)),
+                cr.get_lazy_specifier_set(">=1.9.1,<2.0.0"),
             ),
         ),
         (
-            get_lazy_specifier_set(">=1.10.2,<2.0.0"),
-            SpecifierLazyReleaseSet(
-                ProdLazyReleaseSet(AllLazyReleaseSet(None)),
-                get_lazy_specifier_set(">=1.10.2,<2.0.0"),
+            cr.get_lazy_specifier_set(">=1.10.2,<2.0.0"),
+            cr.SpecifierLazyReleaseSet(
+                cr.ProdLazyReleaseSet(cr.AllLazyReleaseSet(None)),
+                cr.get_lazy_specifier_set(">=1.10.2,<2.0.0"),
             ),
         ),
         (
             Requirement("foo.bar>=1.11.1,<2.0.0"),
-            SpecifierLazyReleaseSet(
-                ProdLazyReleaseSet(AllLazyReleaseSet("foo.bar")),
-                get_lazy_specifier_set(">=1.11.1,<2.0.0"),
+            cr.SpecifierLazyReleaseSet(
+                cr.ProdLazyReleaseSet(cr.AllLazyReleaseSet("foo.bar")),
+                cr.get_lazy_specifier_set(">=1.11.1,<2.0.0"),
             ),
         ),
         (
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(),
-                specifier=get_lazy_specifier_set(">=1.12.3,<2.0.0"),
+                specifier=cr.get_lazy_specifier_set(">=1.12.3,<2.0.0"),
                 marker=None,
             ),
-            SpecifierLazyReleaseSet(
-                ProdLazyReleaseSet(AllLazyReleaseSet("foo.bar")),
-                get_lazy_specifier_set(">=1.12.3,<2.0.0"),
+            cr.SpecifierLazyReleaseSet(
+                cr.ProdLazyReleaseSet(cr.AllLazyReleaseSet("foo.bar")),
+                cr.get_lazy_specifier_set(">=1.12.3,<2.0.0"),
             ),
         ),
     ],
 )
-def test_get_lazy_release_set(release_set: AnyReleaseSet, expected: LazyReleaseSet) -> None:
-    assert expected == get_lazy_release_set(release_set)
+def test_get_lazy_release_set(release_set: cr.AnyReleaseSet, expected: cr.LazyReleaseSet) -> None:
+    assert expected == cr.get_lazy_release_set(release_set)
 
 
 async def test_eager_lazy_version() -> None:
     version = Version("1.1.0")
-    lazy = EagerLazyVersion(version)
+    lazy = cr.EagerLazyVersion(version)
 
-    context = MagicMock(DistributionContext)
+    context = MagicMock(cr.DistributionContext)
     assert version == await lazy.resolve(context)
 
 
 async def test_release_lazy_version() -> None:
     version = Version("3.1.2")
-    release = EagerLazyRelease(fake_release(version=version))
-    lazy = ReleaseLazyVersion(release)
+    release = cr.EagerLazyRelease(fake_release(version=version))
+    lazy = cr.ReleaseLazyVersion(release)
 
-    context = MagicMock(DistributionContext)
+    context = MagicMock(cr.DistributionContext)
     assert version == await lazy.resolve(context)
 
 
 @pytest.mark.parametrize(
     "version,expected",
     [
-        ("1.0.0", EagerLazyVersion(Version("1.0.0"))),
+        ("1.0.0", cr.EagerLazyVersion(Version("1.0.0"))),
         (
             fake_release(version="1.1.0"),
-            EagerLazyVersion(Version("1.1.0")),
+            cr.EagerLazyVersion(Version("1.1.0")),
         ),
         (
-            EagerLazyRelease(
+            cr.EagerLazyRelease(
                 fake_release(version="1.2.0"),
             ),
-            ReleaseLazyVersion(
-                EagerLazyRelease(
+            cr.ReleaseLazyVersion(
+                cr.EagerLazyRelease(
                     fake_release(version="1.2.0"),
                 )
             ),
         ),
-        (Version("1.3.0"), EagerLazyVersion(Version("1.3.0"))),
-        (EagerLazyVersion(Version("1.4.0")), EagerLazyVersion(Version("1.4.0"))),
+        (Version("1.3.0"), cr.EagerLazyVersion(Version("1.3.0"))),
+        (cr.EagerLazyVersion(Version("1.4.0")), cr.EagerLazyVersion(Version("1.4.0"))),
     ],
 )
-def test_get_lazy_version(version: AnyVersion, expected: LazyVersion) -> None:
-    assert expected == get_lazy_version(version)
+def test_get_lazy_version(version: cr.AnyVersion, expected: cr.LazyVersion) -> None:
+    assert expected == cr.get_lazy_version(version)
 
 
 @pytest.mark.parametrize(
     "op,expected",
     [
-        ("~=", SpecifierOperator.COMPATIBLE),
-        (SpecifierOperator.NE, SpecifierOperator.NE),
+        ("~=", cr.SpecifierOperator.COMPATIBLE),
+        (cr.SpecifierOperator.NE, cr.SpecifierOperator.NE),
     ],
 )
-def test_get_specifier_operator(op: AnySpecifierOperator, expected: SpecifierOperator) -> None:
-    assert get_specifier_operator(op) == expected
+def test_get_specifier_operator(
+    op: cr.AnySpecifierOperator, expected: cr.SpecifierOperator
+) -> None:
+    assert cr.get_specifier_operator(op) == expected
 
 
 async def test_lazy_specifier() -> None:
-    op = SpecifierOperator.LT
-    version = MagicMock(LazyVersion)
+    op = cr.SpecifierOperator.LT
+    version = MagicMock(cr.LazyVersion)
     version.resolve.return_value = Version("1.5.0")
-    lazy = LazySpecifier(op, version)
+    lazy = cr.LazySpecifier(op, version)
 
-    context = MagicMock(DistributionContext)
+    context = MagicMock(cr.DistributionContext)
     assert Specifier("<1.5.0") == await lazy.resolve(context)
     version.resolve.assert_called_once_with(context)
 
@@ -378,31 +341,48 @@ async def test_lazy_specifier() -> None:
 @pytest.mark.parametrize(
     "specifier,expected",
     [
-        (">=1.1.0", LazySpecifier(SpecifierOperator.GE, EagerLazyVersion(Version("1.1.0")))),
         (
-            Specifier(">=1.2.0"),
-            LazySpecifier(SpecifierOperator.GE, EagerLazyVersion(Version("1.2.0"))),
+            ">=1.1.0",
+            cr.LazySpecifier(cr.SpecifierOperator.GE, cr.EagerLazyVersion(Version("1.1.0"))),
         ),
         (
-            LazySpecifier(SpecifierOperator.GE, EagerLazyVersion(Version("1.3.0"))),
-            LazySpecifier(SpecifierOperator.GE, EagerLazyVersion(Version("1.3.0"))),
+            Specifier(">=1.2.0"),
+            cr.LazySpecifier(cr.SpecifierOperator.GE, cr.EagerLazyVersion(Version("1.2.0"))),
+        ),
+        (
+            cr.LazySpecifier(cr.SpecifierOperator.GE, cr.EagerLazyVersion(Version("1.3.0"))),
+            cr.LazySpecifier(cr.SpecifierOperator.GE, cr.EagerLazyVersion(Version("1.3.0"))),
         ),
     ],
 )
-def test_get_lazy_specifier(specifier: AnySpecifier, expected: LazySpecifier) -> None:
-    assert get_lazy_specifier(specifier) == expected
+def test_get_lazy_specifier(specifier: cr.AnySpecifier, expected: cr.LazySpecifier) -> None:
+    assert cr.get_lazy_specifier(specifier) == expected
 
 
-async def test_lazy_specifier_set() -> None:
-    specifier_1 = MagicMock(LazySpecifier)
+async def test_eager_lazy_specifier_set() -> None:
+    specifier_1 = MagicMock(cr.LazySpecifier)
     specifier_1.resolve.return_value = Specifier(">=1.2.3")
-    specifier_2 = MagicMock(LazySpecifier)
+    specifier_2 = MagicMock(cr.LazySpecifier)
     specifier_2.resolve.return_value = Specifier("<2.0.0")
 
-    lazy = LazySpecifierSet(frozenset([specifier_1, specifier_2]))
+    lazy = cr.EagerLazySpecifierSet(frozenset([specifier_1, specifier_2]))
 
-    context = MagicMock(DistributionContext)
+    context = MagicMock(cr.DistributionContext)
     assert SpecifierSet(">=1.2.3,<2.0.0") == await lazy.resolve(context)
+    specifier_1.resolve.assert_called_once_with(context)
+    specifier_2.resolve.assert_called_once_with(context)
+
+
+async def test_composite_lazy_specifier_set() -> None:
+    specifier_1 = MagicMock(cr.LazySpecifierSet)
+    specifier_1.resolve.return_value = SpecifierSet("<2.0.0,>=1.2.3")
+    specifier_2 = MagicMock(cr.LazySpecifierSet)
+    specifier_2.resolve.return_value = SpecifierSet("!=1.2.4,!=1.2.5")
+
+    lazy = cr.CompositeLazySpecifierSet(frozenset([specifier_1, specifier_2]))
+
+    context = MagicMock(cr.DistributionContext)
+    assert SpecifierSet(">=1.2.3,<2.0.0,!=1.2.4,!=1.2.5") == await lazy.resolve(context)
     specifier_1.resolve.assert_called_once_with(context)
     specifier_2.resolve.assert_called_once_with(context)
 
@@ -410,33 +390,35 @@ async def test_lazy_specifier_set() -> None:
 @pytest.mark.parametrize(
     "specifier_set,expected",
     [
-        (">=1.1.0", LazySpecifierSet(frozenset([get_lazy_specifier(">=1.1.0")]))),
+        (">=1.1.0", cr.EagerLazySpecifierSet(frozenset([cr.get_lazy_specifier(">=1.1.0")]))),
         (
             Specifier(">=1.2.0"),
-            LazySpecifierSet(frozenset([get_lazy_specifier(">=1.2.0")])),
+            cr.EagerLazySpecifierSet(frozenset([cr.get_lazy_specifier(">=1.2.0")])),
         ),
         (
-            get_lazy_specifier(">=1.3.0"),
-            LazySpecifierSet(frozenset([get_lazy_specifier(">=1.3.0")])),
+            cr.get_lazy_specifier(">=1.3.0"),
+            cr.EagerLazySpecifierSet(frozenset([cr.get_lazy_specifier(">=1.3.0")])),
         ),
         (
             SpecifierSet(">=1.4.0,<2.0.0"),
-            LazySpecifierSet(
-                frozenset([get_lazy_specifier(">=1.4.0"), get_lazy_specifier("<2.0.0")])
+            cr.EagerLazySpecifierSet(
+                frozenset([cr.get_lazy_specifier(">=1.4.0"), cr.get_lazy_specifier("<2.0.0")])
             ),
         ),
         (
-            LazySpecifierSet(
-                frozenset([get_lazy_specifier(">=1.5.0"), get_lazy_specifier("<2.0.0")])
+            cr.EagerLazySpecifierSet(
+                frozenset([cr.get_lazy_specifier(">=1.5.0"), cr.get_lazy_specifier("<2.0.0")])
             ),
-            LazySpecifierSet(
-                frozenset([get_lazy_specifier(">=1.5.0"), get_lazy_specifier("<2.0.0")])
+            cr.EagerLazySpecifierSet(
+                frozenset([cr.get_lazy_specifier(">=1.5.0"), cr.get_lazy_specifier("<2.0.0")])
             ),
         ),
     ],
 )
-def test_get_lazy_specifier_set(specifier_set: AnySpecifierSet, expected: LazySpecifierSet) -> None:
-    assert get_lazy_specifier_set(specifier_set) == expected
+def test_get_lazy_specifier_set(
+    specifier_set: cr.AnySpecifierSet, expected: cr.LazySpecifierSet
+) -> None:
+    assert cr.get_lazy_specifier_set(specifier_set) == expected
 
 
 @pytest.mark.parametrize(
@@ -446,14 +428,14 @@ def test_get_lazy_specifier_set(specifier_set: AnySpecifierSet, expected: LazySp
         (Marker("python_version > '1.1'"), Marker("python_version > '1.1'")),
     ],
 )
-def test_get_marker(marker: AnyMarker, expected: Marker) -> None:
-    assert get_marker(marker) == expected
+def test_get_marker(marker: cr.AnyMarker, expected: Marker) -> None:
+    assert expected == cr.get_marker(marker)
 
 
 async def test_lazy_requirement__specifier() -> None:
-    specifier_set = MagicMock(LazySpecifierSet)
+    specifier_set = MagicMock(cr.LazySpecifierSet)
     specifier_set.resolve.return_value = SpecifierSet(">=1.2.3,<2.0.0")
-    requirement = LazyRequirement(
+    requirement = cr.LazyRequirement(
         "foo.bar",
         None,
         frozenset(["extra_1", "extra_2"]),
@@ -461,8 +443,8 @@ async def test_lazy_requirement__specifier() -> None:
         Marker("python_version>'2.0'"),
     )
 
-    distribution_context = MagicMock(DistributionContext)
-    context = MagicMock(Context)
+    distribution_context = MagicMock(cr.DistributionContext)
+    context = MagicMock(cr.Context)
     context.for_distribution.return_value = distribution_context
 
     assert Requirement(
@@ -473,16 +455,16 @@ async def test_lazy_requirement__specifier() -> None:
 
 
 async def test_lazy_requirement__url() -> None:
-    requirement = LazyRequirement(
+    requirement = cr.LazyRequirement(
         "foo.bar",
         "http://path1/path2",
         frozenset(),
-        LazySpecifierSet(frozenset()),
+        None,
         None,
     )
 
-    distribution_context = MagicMock(DistributionContext)
-    context = MagicMock(Context)
+    distribution_context = MagicMock(cr.DistributionContext)
+    context = MagicMock(cr.Context)
     context.for_distribution.return_value = distribution_context
 
     assert Requirement("foo.bar@ http://path1/path2") == await requirement.resolve(context)
@@ -494,120 +476,120 @@ async def test_lazy_requirement__url() -> None:
     [
         (
             "foo.bar",
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
         ),
         (
             "foo.bar==1.1.0",
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(),
-                specifier=get_lazy_specifier_set("==1.1.0"),
+                specifier=cr.get_lazy_specifier_set("==1.1.0"),
                 marker=None,
             ),
         ),
         (
             Specifier("==1.2.0"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(),
-                specifier=get_lazy_specifier_set("==1.2.0"),
+                specifier=cr.get_lazy_specifier_set("==1.2.0"),
                 marker=None,
             ),
         ),
         (
-            get_lazy_specifier("==1.3.0"),
-            LazyRequirement(
+            cr.get_lazy_specifier("==1.3.0"),
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(),
-                specifier=get_lazy_specifier_set("==1.3.0"),
+                specifier=cr.get_lazy_specifier_set("==1.3.0"),
                 marker=None,
             ),
         ),
         (
             SpecifierSet(">=1.4.0,<2.0.0"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(),
-                specifier=get_lazy_specifier_set(">=1.4.0,<2.0.0"),
+                specifier=cr.get_lazy_specifier_set(">=1.4.0,<2.0.0"),
                 marker=None,
             ),
         ),
         (
-            get_lazy_specifier_set(">=1.4.0,<2.0.0"),
-            LazyRequirement(
+            cr.get_lazy_specifier_set(">=1.4.0,<2.0.0"),
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(),
-                specifier=get_lazy_specifier_set(">=1.4.0,<2.0.0"),
+                specifier=cr.get_lazy_specifier_set(">=1.4.0,<2.0.0"),
                 marker=None,
             ),
         ),
         (
             Requirement("foo.bar[extra]==1.5.0; python_version > '2.0.0'"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(["extra"]),
-                specifier=get_lazy_specifier_set("==1.5.0"),
+                specifier=cr.get_lazy_specifier_set("==1.5.0"),
                 marker=Marker("python_version > '2.0.0'"),
             ),
         ),
         (
             Requirement("foo.bar@http://path/v1.6.0"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url="http://path/v1.6.0",
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
         ),
         (
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(["extra"]),
-                specifier=get_lazy_specifier_set("==1.7.0"),
+                specifier=cr.get_lazy_specifier_set("==1.7.0"),
                 marker=Marker("python_version > '2.0.0'"),
             ),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(["extra"]),
-                specifier=get_lazy_specifier_set("==1.7.0"),
+                specifier=cr.get_lazy_specifier_set("==1.7.0"),
                 marker=Marker("python_version > '2.0.0'"),
             ),
         ),
         (
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url="http://path/v1.8.0",
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url="http://path/v1.8.0",
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
         ),
     ],
 )
-def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequirement) -> None:
-    assert get_lazy_requirement(requirement) == expected
+def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyRequirement) -> None:
+    assert cr.get_lazy_requirement(requirement) == expected
 
 
 @pytest.mark.parametrize(
@@ -617,11 +599,11 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         (
             cr.distribution("foo.bar"),
             cr.distribution("foo.bar"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
         ),
@@ -633,55 +615,55 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         (
             cr.distribution("foo.bar"),
             cr.url("http://path/v1.3.0"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url="http://path/v1.3.0",
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
         ),
         (
             cr.distribution("foo.bar"),
             cr.extra("extra1"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(["extra1"]),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
         ),
         (
             cr.distribution("foo.bar"),
             cr.specifier(">1.5.0"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(),
-                specifier=get_lazy_specifier_set(">1.5.0"),
+                specifier=cr.get_lazy_specifier_set(">1.5.0"),
                 marker=None,
             ),
         ),
         (
             cr.distribution("foo.bar"),
             cr.specifier_set(">1.5.0"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(),
-                specifier=get_lazy_specifier_set(">1.5.0"),
+                specifier=cr.get_lazy_specifier_set(">1.5.0"),
                 marker=None,
             ),
         ),
         (
             cr.distribution("foo.bar"),
             cr.marker("python_version>'2.1'"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=Marker("python_version>'2.1'"),
             ),
         ),
@@ -689,22 +671,22 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         (
             cr.url("http://path/v2.0.0"),
             cr.distribution("foo.bar"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url="http://path/v2.0.0",
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
         ),
         (
             cr.url("http://path/v2.0.0"),
             cr.url("http://path/v2.0.0"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url="http://path/v2.0.0",
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
         ),
@@ -716,11 +698,11 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         (
             cr.url("http://path/v2.0.0"),
             cr.extra("extra1"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url="http://path/v2.0.0",
                 extras=frozenset(["extra1"]),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
         ),
@@ -737,11 +719,11 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         (
             cr.url("http://path/v2.0.0"),
             cr.marker("python_version>'2.1'"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url="http://path/v2.0.0",
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=Marker("python_version>'2.1'"),
             ),
         ),
@@ -749,77 +731,77 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         (
             cr.extra("extra"),
             cr.distribution("foo.bar"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(["extra"]),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
         ),
         (
             cr.extra("extra"),
             cr.url("http://path/v1.3.0"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url="http://path/v1.3.0",
                 extras=frozenset(["extra"]),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
         ),
         (
             cr.extra("extra"),
             cr.extra("extra"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(["extra"]),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
         ),
         (
             cr.extra("extra"),
             cr.extra("extra1"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(["extra", "extra1"]),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=None,
             ),
         ),
         (
             cr.extra("extra"),
             cr.specifier(">1.5.0"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(["extra"]),
-                specifier=get_lazy_specifier_set(">1.5.0"),
+                specifier=cr.get_lazy_specifier_set(">1.5.0"),
                 marker=None,
             ),
         ),
         (
             cr.extra("extra"),
             cr.specifier_set(">1.5.0"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(["extra"]),
-                specifier=get_lazy_specifier_set(">1.5.0"),
+                specifier=cr.get_lazy_specifier_set(">1.5.0"),
                 marker=None,
             ),
         ),
         (
             cr.extra("extra"),
             cr.marker("python_version>'2.1'"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(["extra"]),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=Marker("python_version>'2.1'"),
             ),
         ),
@@ -827,11 +809,11 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         (
             cr.specifier("==2.0.0"),
             cr.distribution("foo.bar"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset([get_lazy_specifier("==2.0.0")])),
+                specifier=cr.EagerLazySpecifierSet(frozenset([cr.get_lazy_specifier("==2.0.0")])),
                 marker=None,
             ),
         ),
@@ -843,37 +825,37 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         (
             cr.specifier("==2.0.0"),
             cr.extra("extra1"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(["extra1"]),
-                specifier=get_lazy_specifier_set("==2.0.0"),
+                specifier=cr.get_lazy_specifier_set("==2.0.0"),
                 marker=None,
             ),
         ),
         (
             cr.specifier("==2.0.0"),
             cr.specifier("==2.0.0"),
-            get_lazy_specifier_set("==2.0.0"),
+            cr.get_lazy_specifier_set("==2.0.0"),
         ),
         (
             cr.specifier("==2.0.0"),
             cr.specifier(">1.5.0"),
-            get_lazy_specifier_set(">1.5.0,==2.0.0"),
+            cr.get_lazy_specifier_set(">1.5.0,==2.0.0"),
         ),
         (
             cr.specifier("==2.0.0"),
             cr.specifier_set(">1.5.0"),
-            get_lazy_specifier_set(">1.5.0,==2.0.0"),
+            cr.get_lazy_specifier_set(">1.5.0,==2.0.0"),
         ),
         (
             cr.specifier("==2.0.0"),
             cr.marker("python_version>'2.1'"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(),
-                specifier=get_lazy_specifier_set("==2.0.0"),
+                specifier=cr.get_lazy_specifier_set("==2.0.0"),
                 marker=Marker("python_version>'2.1'"),
             ),
         ),
@@ -881,11 +863,11 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         (
             cr.specifier_set("==2.0.0"),
             cr.distribution("foo.bar"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset([get_lazy_specifier("==2.0.0")])),
+                specifier=cr.EagerLazySpecifierSet(frozenset([cr.get_lazy_specifier("==2.0.0")])),
                 marker=None,
             ),
         ),
@@ -897,37 +879,37 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         (
             cr.specifier_set("==2.0.0"),
             cr.extra("extra1"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(["extra1"]),
-                specifier=get_lazy_specifier_set("==2.0.0"),
+                specifier=cr.get_lazy_specifier_set("==2.0.0"),
                 marker=None,
             ),
         ),
         (
             cr.specifier_set("==2.0.0"),
             cr.specifier(">1.5.0"),
-            get_lazy_specifier_set(">1.5.0,==2.0.0"),
+            cr.get_lazy_specifier_set(">1.5.0,==2.0.0"),
         ),
         (
             cr.specifier_set("==2.0.0"),
             cr.specifier_set("==2.0.0"),
-            get_lazy_specifier_set("==2.0.0"),
+            cr.get_lazy_specifier_set("==2.0.0"),
         ),
         (
             cr.specifier_set("==2.0.0"),
             cr.specifier_set(">1.5.0"),
-            get_lazy_specifier_set(">1.5.0,==2.0.0"),
+            cr.get_lazy_specifier_set(">1.5.0,==2.0.0"),
         ),
         (
             cr.specifier_set("==2.0.0"),
             cr.marker("python_version>'2.1'"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(),
-                specifier=get_lazy_specifier_set("==2.0.0"),
+                specifier=cr.get_lazy_specifier_set("==2.0.0"),
                 marker=Marker("python_version>'2.1'"),
             ),
         ),
@@ -935,86 +917,86 @@ def test_get_lazy_requirement(requirement: AnyRequirement, expected: LazyRequire
         (
             cr.marker("python_version=='3.0'"),
             cr.distribution("foo.bar"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=Marker("python_version=='3.0'"),
             ),
         ),
         (
             cr.marker("python_version=='3.0'"),
             cr.url("http://path/v1.3.0"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url="http://path/v1.3.0",
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=Marker("python_version=='3.0'"),
             ),
         ),
         (
             cr.marker("python_version=='3.0'"),
             cr.extra("extra1"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(["extra1"]),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=Marker("python_version=='3.0'"),
             ),
         ),
         (
             cr.marker("python_version=='3.0'"),
             cr.specifier(">1.5.0"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(),
-                specifier=get_lazy_specifier_set(">1.5.0"),
+                specifier=cr.get_lazy_specifier_set(">1.5.0"),
                 marker=Marker("python_version=='3.0'"),
             ),
         ),
         (
             cr.marker("python_version=='3.0'"),
             cr.specifier_set(">1.5.0"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(),
-                specifier=get_lazy_specifier_set(">1.5.0"),
+                specifier=cr.get_lazy_specifier_set(">1.5.0"),
                 marker=Marker("python_version=='3.0'"),
             ),
         ),
         (
             cr.marker("python_version=='3.0'"),
             cr.marker("python_version=='3.0'"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=Marker("python_version=='3.0'"),
             ),
         ),
         (
             cr.marker("python_version=='3.0'"),
             cr.marker("python_version>'2.1'"),
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution=None,
                 url=None,
                 extras=frozenset(),
-                specifier=LazySpecifierSet(frozenset()),
+                specifier=None,
                 marker=Marker("python_version=='3.0' and python_version>'2.1'"),
             ),
         ),
     ],
 )
 def test_compose(
-    lhs: LazyRequirement,
-    rhs: LazyRequirement,
-    expected: LazyRequirement | LazySpecifierSet | Type[Exception],
+    lhs: cr.LazyRequirement,
+    rhs: cr.LazyRequirement,
+    expected: cr.LazyRequirement | cr.LazySpecifierSet | Type[Exception],
 ) -> None:
     if isinstance(expected, type):
         with pytest.raises(expected):
@@ -1023,19 +1005,46 @@ def test_compose(
         assert (lhs & rhs) == expected
 
 
+def test_compose__specifier_sets() -> None:
+    specifier_1 = MagicMock(cr.LazySpecifier)
+    specifier_2 = MagicMock(cr.LazySpecifier)
+    specifier_3 = MagicMock(cr.LazySpecifier)
+    specifier_set_1 = MagicMock(cr.LazySpecifierSet)
+    specifier_set_2 = MagicMock(cr.LazySpecifierSet)
+    specifier_set_3 = MagicMock(cr.LazySpecifierSet)
+
+    eager_1 = cr.EagerLazySpecifierSet(frozenset([specifier_1, specifier_2]))
+    eager_2 = cr.EagerLazySpecifierSet(frozenset([specifier_1, specifier_3]))
+    composite_1 = cr.CompositeLazySpecifierSet(frozenset([specifier_set_1, specifier_set_2]))
+    composite_2 = cr.CompositeLazySpecifierSet(frozenset([specifier_set_1, specifier_set_3]))
+
+    assert cr.EagerLazySpecifierSet(
+        frozenset([specifier_1, specifier_2, specifier_3])
+    ) == cr.compose(eager_1, eager_2)
+    assert cr.CompositeLazySpecifierSet(
+        frozenset([eager_1, specifier_set_1, specifier_set_2])
+    ) == cr.compose(eager_1, composite_1)
+    assert cr.CompositeLazySpecifierSet(
+        frozenset([eager_1, specifier_set_1, specifier_set_2])
+    ) == cr.compose(composite_1, eager_1)
+    assert cr.CompositeLazySpecifierSet(
+        frozenset([specifier_set_1, specifier_set_2, specifier_set_3])
+    ) == cr.compose(composite_1, composite_2)
+
+
 @pytest.mark.parametrize(
     "requirement_set,expected",
     [
         (
             "foo.bar",
-            EagerLazyRequirementSet(
+            cr.EagerLazyRequirementSet(
                 frozenset(
                     [
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution="foo.bar",
                             url=None,
                             extras=frozenset(),
-                            specifier=LazySpecifierSet(frozenset()),
+                            specifier=None,
                             marker=None,
                         )
                     ]
@@ -1044,14 +1053,14 @@ def test_compose(
         ),
         (
             "foo.bar==1.1.0",
-            EagerLazyRequirementSet(
+            cr.EagerLazyRequirementSet(
                 frozenset(
                     [
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution="foo.bar",
                             url=None,
                             extras=frozenset(),
-                            specifier=get_lazy_specifier_set("==1.1.0"),
+                            specifier=cr.get_lazy_specifier_set("==1.1.0"),
                             marker=None,
                         )
                     ]
@@ -1060,14 +1069,14 @@ def test_compose(
         ),
         (
             Specifier("==1.2.0"),
-            EagerLazyRequirementSet(
+            cr.EagerLazyRequirementSet(
                 frozenset(
                     [
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution=None,
                             url=None,
                             extras=frozenset(),
-                            specifier=get_lazy_specifier_set("==1.2.0"),
+                            specifier=cr.get_lazy_specifier_set("==1.2.0"),
                             marker=None,
                         )
                     ]
@@ -1075,15 +1084,15 @@ def test_compose(
             ),
         ),
         (
-            get_lazy_specifier("==1.3.0"),
-            EagerLazyRequirementSet(
+            cr.get_lazy_specifier("==1.3.0"),
+            cr.EagerLazyRequirementSet(
                 frozenset(
                     [
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution=None,
                             url=None,
                             extras=frozenset(),
-                            specifier=get_lazy_specifier_set("==1.3.0"),
+                            specifier=cr.get_lazy_specifier_set("==1.3.0"),
                             marker=None,
                         )
                     ]
@@ -1092,14 +1101,14 @@ def test_compose(
         ),
         (
             SpecifierSet(">=1.4.0,<2.0.0"),
-            EagerLazyRequirementSet(
+            cr.EagerLazyRequirementSet(
                 frozenset(
                     [
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution=None,
                             url=None,
                             extras=frozenset(),
-                            specifier=get_lazy_specifier_set(">=1.4.0,<2.0.0"),
+                            specifier=cr.get_lazy_specifier_set(">=1.4.0,<2.0.0"),
                             marker=None,
                         )
                     ]
@@ -1107,15 +1116,15 @@ def test_compose(
             ),
         ),
         (
-            get_lazy_specifier_set(">=1.4.0,<2.0.0"),
-            EagerLazyRequirementSet(
+            cr.get_lazy_specifier_set(">=1.4.0,<2.0.0"),
+            cr.EagerLazyRequirementSet(
                 frozenset(
                     [
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution=None,
                             url=None,
                             extras=frozenset(),
-                            specifier=get_lazy_specifier_set(">=1.4.0,<2.0.0"),
+                            specifier=cr.get_lazy_specifier_set(">=1.4.0,<2.0.0"),
                             marker=None,
                         )
                     ]
@@ -1124,14 +1133,14 @@ def test_compose(
         ),
         (
             Requirement("foo.bar[extra]==1.5.0; python_version > '2.0.0'"),
-            EagerLazyRequirementSet(
+            cr.EagerLazyRequirementSet(
                 frozenset(
                     [
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution="foo.bar",
                             url=None,
                             extras=frozenset(["extra"]),
-                            specifier=get_lazy_specifier_set("==1.5.0"),
+                            specifier=cr.get_lazy_specifier_set("==1.5.0"),
                             marker=Marker("python_version > '2.0.0'"),
                         )
                     ]
@@ -1139,21 +1148,21 @@ def test_compose(
             ),
         ),
         (
-            LazyRequirement(
+            cr.LazyRequirement(
                 distribution="foo.bar",
                 url=None,
                 extras=frozenset(["extra"]),
-                specifier=get_lazy_specifier_set("==1.7.0"),
+                specifier=cr.get_lazy_specifier_set("==1.7.0"),
                 marker=Marker("python_version > '2.0.0'"),
             ),
-            EagerLazyRequirementSet(
+            cr.EagerLazyRequirementSet(
                 frozenset(
                     [
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution="foo.bar",
                             url=None,
                             extras=frozenset(["extra"]),
-                            specifier=get_lazy_specifier_set("==1.7.0"),
+                            specifier=cr.get_lazy_specifier_set("==1.7.0"),
                             marker=Marker("python_version > '2.0.0'"),
                         )
                     ]
@@ -1165,21 +1174,21 @@ def test_compose(
                 Requirement("foo>=1.2.3"),
                 Requirement("bar==2.0.0"),
             ],
-            EagerLazyRequirementSet(
+            cr.EagerLazyRequirementSet(
                 frozenset(
                     [
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution="foo",
                             url=None,
                             extras=frozenset(),
-                            specifier=get_lazy_specifier_set(">=1.2.3"),
+                            specifier=cr.get_lazy_specifier_set(">=1.2.3"),
                             marker=None,
                         ),
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution="bar",
                             url=None,
                             extras=frozenset(),
-                            specifier=get_lazy_specifier_set("==2.0.0"),
+                            specifier=cr.get_lazy_specifier_set("==2.0.0"),
                             marker=None,
                         ),
                     ]
@@ -1191,21 +1200,21 @@ def test_compose(
                 "foo": Requirement("foo>=1.2.3"),
                 "bar": Requirement("bar==2.0.0"),
             },
-            EagerLazyRequirementSet(
+            cr.EagerLazyRequirementSet(
                 frozenset(
                     [
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution="foo",
                             url=None,
                             extras=frozenset(),
-                            specifier=get_lazy_specifier_set(">=1.2.3"),
+                            specifier=cr.get_lazy_specifier_set(">=1.2.3"),
                             marker=None,
                         ),
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution="bar",
                             url=None,
                             extras=frozenset(),
-                            specifier=get_lazy_specifier_set("==2.0.0"),
+                            specifier=cr.get_lazy_specifier_set("==2.0.0"),
                             marker=None,
                         ),
                     ]
@@ -1213,27 +1222,27 @@ def test_compose(
             ),
         ),
         (
-            RequirementSet.new(
+            cr.RequirementSet.new(
                 [
                     Requirement("foo>=1.2.3"),
                     Requirement("bar==2.0.0"),
                 ],
             ),
-            EagerLazyRequirementSet(
+            cr.EagerLazyRequirementSet(
                 frozenset(
                     [
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution="foo",
                             url=None,
                             extras=frozenset(),
-                            specifier=get_lazy_specifier_set(">=1.2.3"),
+                            specifier=cr.get_lazy_specifier_set(">=1.2.3"),
                             marker=None,
                         ),
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution="bar",
                             url=None,
                             extras=frozenset(),
-                            specifier=get_lazy_specifier_set("==2.0.0"),
+                            specifier=cr.get_lazy_specifier_set("==2.0.0"),
                             marker=None,
                         ),
                     ]
@@ -1241,41 +1250,41 @@ def test_compose(
             ),
         ),
         (
-            EagerLazyRequirementSet(
+            cr.EagerLazyRequirementSet(
                 frozenset(
                     [
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution="foo",
                             url=None,
                             extras=frozenset(),
-                            specifier=get_lazy_specifier_set(">=1.2.3"),
+                            specifier=cr.get_lazy_specifier_set(">=1.2.3"),
                             marker=None,
                         ),
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution="bar",
                             url=None,
                             extras=frozenset(),
-                            specifier=get_lazy_specifier_set("==2.0.0"),
+                            specifier=cr.get_lazy_specifier_set("==2.0.0"),
                             marker=None,
                         ),
                     ]
                 ),
             ),
-            EagerLazyRequirementSet(
+            cr.EagerLazyRequirementSet(
                 frozenset(
                     [
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution="foo",
                             url=None,
                             extras=frozenset(),
-                            specifier=get_lazy_specifier_set(">=1.2.3"),
+                            specifier=cr.get_lazy_specifier_set(">=1.2.3"),
                             marker=None,
                         ),
-                        LazyRequirement(
+                        cr.LazyRequirement(
                             distribution="bar",
                             url=None,
                             extras=frozenset(),
-                            specifier=get_lazy_specifier_set("==2.0.0"),
+                            specifier=cr.get_lazy_specifier_set("==2.0.0"),
                             marker=None,
                         ),
                     ]
@@ -1285,6 +1294,6 @@ def test_compose(
     ],
 )
 def test_get_lazy_requirement_set(
-    requirement_set: AnyRequirementSet, expected: LazyRequirementSet
+    requirement_set: cr.AnyRequirementSet, expected: cr.LazyRequirementSet
 ) -> None:
-    assert get_lazy_requirement_set(requirement_set) == expected
+    assert cr.get_lazy_requirement_set(requirement_set) == expected
