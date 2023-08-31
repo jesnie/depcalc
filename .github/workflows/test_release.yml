@@ -39,7 +39,7 @@ jobs:
       - run: poetry run python -c "import compreq"
 
   all-tests:
-    needs: [tests]
+    needs: [tests, test-install]
     runs-on: ubuntu-latest
     steps:
       - run: echo ok
