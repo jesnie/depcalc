@@ -52,13 +52,13 @@ from compreq import (
 from tests.utils import fake_release, fake_release_set
 
 
-def test_eager_lazy_release() -> None:
+async def test_eager_lazy_release() -> None:
     release = fake_release()
     lazy = EagerLazyRelease(release)
 
     context = MagicMock(PackageContext)
     assert "foo.bar" == lazy.get_package()
-    assert release == lazy.resolve(context)
+    assert release == await lazy.resolve(context)
 
 
 @pytest.mark.parametrize(
@@ -78,16 +78,16 @@ def test_get_lazy_release(release: AnyRelease, expected: LazyRelease) -> None:
     assert expected == get_lazy_release(release)
 
 
-def test_eager_lazy_release_set__empty() -> None:
+async def test_eager_lazy_release_set__empty() -> None:
     lazy = EagerLazyReleaseSet(frozenset())
     context = MagicMock(PackageContext)
     context.package = "foo.bar"
 
     assert lazy.get_package() is None
-    assert ReleaseSet("foo.bar", frozenset()) == lazy.resolve(context)
+    assert ReleaseSet("foo.bar", frozenset()) == await lazy.resolve(context)
 
 
-def test_eager_lazy_release_set() -> None:
+async def test_eager_lazy_release_set() -> None:
     release_2 = fake_release(version="1.2.0")
     release_1 = fake_release(version="1.1.0", successor=release_2)
 
@@ -98,10 +98,10 @@ def test_eager_lazy_release_set() -> None:
     context.package = "foo.bar"
 
     assert "foo.bar" == lazy.get_package()
-    assert ReleaseSet("foo.bar", frozenset([release_1, release_2])) == lazy.resolve(context)
+    assert ReleaseSet("foo.bar", frozenset([release_1, release_2])) == await lazy.resolve(context)
 
 
-def test_all_lazy_release_set() -> None:
+async def test_all_lazy_release_set() -> None:
     releases = fake_release_set(
         releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
     )
@@ -114,11 +114,11 @@ def test_all_lazy_release_set() -> None:
     assert lazy.get_package() is None
     assert fake_release_set(
         releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
-    ) == lazy.resolve(context)
+    ) == await lazy.resolve(context)
     context.releases.assert_called_once_with("foo.bar")
 
 
-def test_all_lazy_release_set__package() -> None:
+async def test_all_lazy_release_set__package() -> None:
     releases = fake_release_set(
         package="foo", releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
     )
@@ -134,12 +134,12 @@ def test_all_lazy_release_set__package() -> None:
         == fake_release_set(
             package="foo", releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
         )
-        == lazy.resolve(context)
+        == await lazy.resolve(context)
     )
     context.releases.assert_called_once_with("foo")
 
 
-def test_prod_lazy_release_set() -> None:
+async def test_prod_lazy_release_set() -> None:
     releases = fake_release_set(
         releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
     )
@@ -151,11 +151,11 @@ def test_prod_lazy_release_set() -> None:
     lazy = ProdLazyReleaseSet(source)
 
     assert "foo" == lazy.get_package()
-    assert fake_release_set(releases=["1.2.0", "1.3.0"]) == lazy.resolve(context)
+    assert fake_release_set(releases=["1.2.0", "1.3.0"]) == await lazy.resolve(context)
     source.resolve.assert_called_once_with(context)
 
 
-def test_pre_lazy_release_set() -> None:
+async def test_pre_lazy_release_set() -> None:
     releases = fake_release_set(
         releases=["1.2.0", "1.3.0.rc1.dev1", "1.3.0.rc1", "1.3.0.dev1", "1.3.0"]
     )
@@ -167,11 +167,11 @@ def test_pre_lazy_release_set() -> None:
     lazy = PreLazyReleaseSet(source)
 
     assert "foo" == lazy.get_package()
-    assert fake_release_set(releases=["1.2.0", "1.3.0.rc1", "1.3.0"]) == lazy.resolve(context)
+    assert fake_release_set(releases=["1.2.0", "1.3.0.rc1", "1.3.0"]) == await lazy.resolve(context)
     source.resolve.assert_called_once_with(context)
 
 
-def test_specifier_lazy_release_set() -> None:
+async def test_specifier_lazy_release_set() -> None:
     releases = fake_release_set(
         releases=["1.2.0", "1.2.1", "1.3.0", "1.3.1", "1.4.0", "2.0.0", "2.1.0"],
         infer_successors=False,
@@ -187,7 +187,7 @@ def test_specifier_lazy_release_set() -> None:
     assert fake_release_set(
         releases=["1.3.0", "1.3.1", "1.4.0"],
         infer_successors=False,
-    ) == lazy.resolve(context)
+    ) == await lazy.resolve(context)
     source.resolve.assert_called_once_with(context)
 
 
@@ -309,21 +309,21 @@ def test_get_lazy_release_set(release_set: AnyReleaseSet, expected: LazyReleaseS
     assert expected == get_lazy_release_set(release_set)
 
 
-def test_eager_lazy_version() -> None:
+async def test_eager_lazy_version() -> None:
     version = Version("1.1.0")
     lazy = EagerLazyVersion(version)
 
     context = MagicMock(PackageContext)
-    assert version == lazy.resolve(context)
+    assert version == await lazy.resolve(context)
 
 
-def test_release_lazy_version() -> None:
+async def test_release_lazy_version() -> None:
     version = Version("3.1.2")
     release = EagerLazyRelease(fake_release(version=version))
     lazy = ReleaseLazyVersion(release)
 
     context = MagicMock(PackageContext)
-    assert version == lazy.resolve(context)
+    assert version == await lazy.resolve(context)
 
 
 @pytest.mark.parametrize(
@@ -363,14 +363,14 @@ def test_get_specifier_operator(op: AnySpecifierOperator, expected: SpecifierOpe
     assert get_specifier_operator(op) == expected
 
 
-def test_lazy_specifier() -> None:
+async def test_lazy_specifier() -> None:
     op = SpecifierOperator.LT
     version = MagicMock(LazyVersion)
     version.resolve.return_value = Version("1.5.0")
     lazy = LazySpecifier(op, version)
 
     context = MagicMock(PackageContext)
-    assert Specifier("<1.5.0") == lazy.resolve(context)
+    assert Specifier("<1.5.0") == await lazy.resolve(context)
     version.resolve.assert_called_once_with(context)
 
 
@@ -392,7 +392,7 @@ def test_get_lazy_specifier(specifier: AnySpecifier, expected: LazySpecifier) ->
     assert get_lazy_specifier(specifier) == expected
 
 
-def test_lazy_specifier_set() -> None:
+async def test_lazy_specifier_set() -> None:
     specifier_1 = MagicMock(LazySpecifier)
     specifier_1.resolve.return_value = Specifier(">=1.2.3")
     specifier_2 = MagicMock(LazySpecifier)
@@ -401,7 +401,7 @@ def test_lazy_specifier_set() -> None:
     lazy = LazySpecifierSet(frozenset([specifier_1, specifier_2]))
 
     context = MagicMock(PackageContext)
-    assert SpecifierSet(">=1.2.3,<2.0.0") == lazy.resolve(context)
+    assert SpecifierSet(">=1.2.3,<2.0.0") == await lazy.resolve(context)
     specifier_1.resolve.assert_called_once_with(context)
     specifier_2.resolve.assert_called_once_with(context)
 
@@ -449,7 +449,7 @@ def test_get_marker(marker: AnyMarker, expected: Marker) -> None:
     assert get_marker(marker) == expected
 
 
-def test_lazy_requirement__specifier() -> None:
+async def test_lazy_requirement__specifier() -> None:
     specifier_set = MagicMock(LazySpecifierSet)
     specifier_set.resolve.return_value = SpecifierSet(">=1.2.3,<2.0.0")
     requirement = LazyRequirement(
@@ -466,12 +466,12 @@ def test_lazy_requirement__specifier() -> None:
 
     assert Requirement(
         "foo.bar[extra_1,extra_2]<2.0.0,>=1.2.3; python_version > '2.0'"
-    ) == requirement.resolve(context)
+    ) == await requirement.resolve(context)
     context.for_package.assert_called_once_with("foo.bar")
     specifier_set.resolve.assert_called_once_with(package_context)
 
 
-def test_lazy_requirement__url() -> None:
+async def test_lazy_requirement__url() -> None:
     requirement = LazyRequirement(
         "foo.bar",
         "http://path1/path2",
@@ -484,7 +484,7 @@ def test_lazy_requirement__url() -> None:
     context = MagicMock(Context)
     context.for_package.return_value = package_context
 
-    assert Requirement("foo.bar@ http://path1/path2") == requirement.resolve(context)
+    assert Requirement("foo.bar@ http://path1/path2") == await requirement.resolve(context)
     context.for_package.assert_called_once_with("foo.bar")
 
 

@@ -8,7 +8,7 @@ from compreq import get_pypi_releases
 from tests.utils import assert_release_set, utc
 
 
-def test_pypireleases(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_pypireleases(monkeypatch: pytest.MonkeyPatch) -> None:
     package = "foo.bar"
 
     def fake_requests_get(url: str, timeout: float) -> Any:
@@ -58,5 +58,5 @@ def test_pypireleases(monkeypatch: pytest.MonkeyPatch) -> None:
             ("1.2.4a1", utc(dt.datetime(2023, 8, 23, 9, 4)), "1.2.6"),
             ("1.2.6", utc(dt.datetime(2023, 8, 23, 9, 7)), None),
         ],
-        get_pypi_releases(package),
+        await get_pypi_releases(package),
     )

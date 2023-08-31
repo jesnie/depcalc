@@ -7,6 +7,7 @@
 # tensorflow = {version = ">=2.8.0", markers = "platform_system != \"Darwin\" or platform_machine != \"arm64\""}
 # check-shapes = {path = "/home/foo/src/check_shapes"}
 
+import asyncio
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -117,8 +118,8 @@ version = "0.1.0"
     with PoetryPyprojectFile.open(pyproject_path) as pyproject:
         compreq = MagicMock(CompReq)
         compreq.context = MagicMock(Context)
-        compreq.resolve_requirement_set.side_effect = lambda r: get_lazy_requirement_set(r).resolve(
-            compreq.context
+        compreq.resolve_requirement_set.side_effect = lambda r: asyncio.run(
+            get_lazy_requirement_set(r).resolve(compreq.context)
         )
 
         pyproject.set_requirements(

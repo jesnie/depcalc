@@ -82,6 +82,7 @@ def main() -> None:
                 cr.pkg("mypy") & dev_range,
                 cr.pkg("pylint") & dev_range,
                 cr.pkg("pytest") & dev_range,
+                cr.pkg("pytest-asyncio") & dev_range,
                 cr.pkg("taskipy") & dev_range,
                 cr.pkg("types-beautifulsoup4") & default_range,
                 cr.pkg("types-python-dateutil") & default_range,
