@@ -77,8 +77,12 @@ class PoetryPyprojectFile(PyprojectFile):
                 result &= SpecifierSet(f"<{upper},>={version}")
             elif specifier.startswith("~"):
                 result &= SpecifierSet(f"~={specifier[1:]}")
-            else:
+            elif (
+                specifier.startswith("<") or specifier.startswith(">") or specifier.startswith("!=")
+            ):
                 result &= SpecifierSet(specifier)
+            else:
+                result &= SpecifierSet(f"=={specifier}")
         return result
 
     def set_requirements(
@@ -121,7 +125,9 @@ class PoetryPyprojectFile(PyprojectFile):
     def _format_specifier_set(self, specifier_set: SpecifierSet) -> str:
         specifiers = []
         for specifier in specifier_set:
-            if specifier.operator == "~=":
+            if specifier.operator == "==":
+                specifiers.append(specifier.version)
+            elif specifier.operator == "~=":
                 specifiers.append(f"~{specifier.version}")
             else:
                 specifiers.append(str(specifier))
