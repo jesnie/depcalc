@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 from typing import NoReturn, overload
 
-from packaging.requirements import Requirement
 from packaging.specifiers import Specifier, SpecifierSet
 from packaging.version import Version
 
@@ -25,7 +24,7 @@ from compreq.lazy import (
     get_lazy_version,
 )
 from compreq.releases import Release, ReleaseSet
-from compreq.requirements import RequirementSet
+from compreq.requirements import OptionalRequirement, RequirementSet
 
 
 class CompReq:
@@ -143,7 +142,7 @@ class CompReq:
         future = get_lazy_specifier_set(specifier_set).resolve(context)
         return asyncio.run(future)
 
-    def resolve_requirement(self, requirement: AnyRequirement) -> Requirement:
+    def resolve_requirement(self, requirement: AnyRequirement) -> OptionalRequirement:
         future = get_lazy_requirement(requirement).resolve(self._context)
         return asyncio.run(future)
 

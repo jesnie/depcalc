@@ -259,6 +259,7 @@ async def test_specifier_lazy_release_set() -> None:
                 extras=frozenset(),
                 specifier=cr.get_lazy_specifier_set(">=1.12.3,<2.0.0"),
                 marker=None,
+                optional=True,
             ),
             cr.SpecifierLazyReleaseSet(
                 cr.ProdLazyReleaseSet(cr.AllLazyReleaseSet("foo.bar")),
@@ -475,14 +476,15 @@ async def test_lazy_requirement__specifier() -> None:
         frozenset(["extra_1", "extra_2"]),
         specifier_set,
         Marker("python_version>'2.0'"),
+        optional=True,
     )
 
     distribution_context = MagicMock(cr.DistributionContext)
     context = MagicMock(cr.Context)
     context.for_distribution.return_value = distribution_context
 
-    assert Requirement(
-        "foo.bar[extra_1,extra_2]<2.0.0,>=1.2.3; python_version > '2.0'"
+    assert cr.OptionalRequirement(
+        Requirement("foo.bar[extra_1,extra_2]<2.0.0,>=1.2.3; python_version > '2.0'"), True
     ) == await requirement.resolve(context)
     context.for_distribution.assert_called_once_with("foo.bar")
     specifier_set.resolve.assert_called_once_with(distribution_context)
@@ -495,13 +497,16 @@ async def test_lazy_requirement__url() -> None:
         frozenset(),
         None,
         None,
+        optional=None,
     )
 
     distribution_context = MagicMock(cr.DistributionContext)
     context = MagicMock(cr.Context)
     context.for_distribution.return_value = distribution_context
 
-    assert Requirement("foo.bar@ http://path1/path2") == await requirement.resolve(context)
+    assert cr.OptionalRequirement(
+        Requirement("foo.bar@ http://path1/path2"), False
+    ) == await requirement.resolve(context)
     context.for_distribution.assert_called_once_with("foo.bar")
 
 
@@ -516,6 +521,7 @@ async def test_lazy_requirement__url() -> None:
                 extras=frozenset(),
                 specifier=None,
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -526,6 +532,7 @@ async def test_lazy_requirement__url() -> None:
                 extras=frozenset(),
                 specifier=cr.get_lazy_specifier_set("==1.1.0"),
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -536,6 +543,7 @@ async def test_lazy_requirement__url() -> None:
                 extras=frozenset(),
                 specifier=cr.get_lazy_specifier_set(fake_release(version="1.2.3")),
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -546,6 +554,7 @@ async def test_lazy_requirement__url() -> None:
                 extras=frozenset(),
                 specifier=cr.get_lazy_specifier_set(fake_release(version="1.2.3")),
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -556,6 +565,7 @@ async def test_lazy_requirement__url() -> None:
                 extras=frozenset(),
                 specifier=cr.get_lazy_specifier_set("==1.2.0"),
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -566,6 +576,7 @@ async def test_lazy_requirement__url() -> None:
                 extras=frozenset(),
                 specifier=cr.get_lazy_specifier_set("==1.3.0"),
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -576,6 +587,7 @@ async def test_lazy_requirement__url() -> None:
                 extras=frozenset(),
                 specifier=cr.get_lazy_specifier_set(">=1.4.0,<2.0.0"),
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -586,6 +598,31 @@ async def test_lazy_requirement__url() -> None:
                 extras=frozenset(),
                 specifier=cr.get_lazy_specifier_set(">=1.4.0,<2.0.0"),
                 marker=None,
+                optional=None,
+            ),
+        ),
+        (
+            cr.OptionalRequirement(
+                Requirement("foo.bar[extra]==1.5.0; python_version > '2.0.0'"), True
+            ),
+            cr.LazyRequirement(
+                distribution="foo.bar",
+                url=None,
+                extras=frozenset(["extra"]),
+                specifier=cr.get_lazy_specifier_set("==1.5.0"),
+                marker=Marker("python_version > '2.0.0'"),
+                optional=True,
+            ),
+        ),
+        (
+            cr.OptionalRequirement(Requirement("foo.bar@http://path/v1.6.0"), False),
+            cr.LazyRequirement(
+                distribution="foo.bar",
+                url="http://path/v1.6.0",
+                extras=frozenset(),
+                specifier=None,
+                marker=None,
+                optional=False,
             ),
         ),
         (
@@ -596,6 +633,7 @@ async def test_lazy_requirement__url() -> None:
                 extras=frozenset(["extra"]),
                 specifier=cr.get_lazy_specifier_set("==1.5.0"),
                 marker=Marker("python_version > '2.0.0'"),
+                optional=None,
             ),
         ),
         (
@@ -606,6 +644,7 @@ async def test_lazy_requirement__url() -> None:
                 extras=frozenset(),
                 specifier=None,
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -615,6 +654,7 @@ async def test_lazy_requirement__url() -> None:
                 extras=frozenset(["extra"]),
                 specifier=cr.get_lazy_specifier_set("==1.7.0"),
                 marker=Marker("python_version > '2.0.0'"),
+                optional=True,
             ),
             cr.LazyRequirement(
                 distribution="foo.bar",
@@ -622,6 +662,7 @@ async def test_lazy_requirement__url() -> None:
                 extras=frozenset(["extra"]),
                 specifier=cr.get_lazy_specifier_set("==1.7.0"),
                 marker=Marker("python_version > '2.0.0'"),
+                optional=True,
             ),
         ),
         (
@@ -631,6 +672,7 @@ async def test_lazy_requirement__url() -> None:
                 extras=frozenset(),
                 specifier=None,
                 marker=None,
+                optional=False,
             ),
             cr.LazyRequirement(
                 distribution="foo.bar",
@@ -638,6 +680,7 @@ async def test_lazy_requirement__url() -> None:
                 extras=frozenset(),
                 specifier=None,
                 marker=None,
+                optional=False,
             ),
         ),
     ],
@@ -659,6 +702,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=None,
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -675,6 +719,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=None,
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -686,6 +731,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(["extra1"]),
                 specifier=None,
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -697,6 +743,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=cr.get_lazy_specifier_set(">1.5.0"),
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -708,6 +755,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=cr.get_lazy_specifier_set(">1.5.0"),
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -719,6 +767,19 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=None,
                 marker=Marker("python_version>'2.1'"),
+                optional=None,
+            ),
+        ),
+        (
+            cr.distribution("foo.bar"),
+            cr.optional(),
+            cr.LazyRequirement(
+                distribution="foo.bar",
+                url=None,
+                extras=frozenset(),
+                specifier=None,
+                marker=None,
+                optional=True,
             ),
         ),
         # Url
@@ -731,6 +792,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=None,
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -742,6 +804,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=None,
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -758,6 +821,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(["extra1"]),
                 specifier=None,
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -779,6 +843,19 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=None,
                 marker=Marker("python_version>'2.1'"),
+                optional=None,
+            ),
+        ),
+        (
+            cr.url("http://path/v2.0.0"),
+            cr.optional(),
+            cr.LazyRequirement(
+                distribution=None,
+                url="http://path/v2.0.0",
+                extras=frozenset(),
+                specifier=None,
+                marker=None,
+                optional=True,
             ),
         ),
         # Extra
@@ -791,6 +868,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(["extra"]),
                 specifier=None,
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -802,6 +880,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(["extra"]),
                 specifier=None,
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -813,6 +892,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(["extra"]),
                 specifier=None,
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -824,6 +904,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(["extra", "extra1"]),
                 specifier=None,
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -835,6 +916,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(["extra"]),
                 specifier=cr.get_lazy_specifier_set(">1.5.0"),
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -846,6 +928,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(["extra"]),
                 specifier=cr.get_lazy_specifier_set(">1.5.0"),
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -857,6 +940,19 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(["extra"]),
                 specifier=None,
                 marker=Marker("python_version>'2.1'"),
+                optional=None,
+            ),
+        ),
+        (
+            cr.extra("extra"),
+            cr.optional(),
+            cr.LazyRequirement(
+                distribution=None,
+                url=None,
+                extras=frozenset(["extra"]),
+                specifier=None,
+                marker=None,
+                optional=True,
             ),
         ),
         # Specifier
@@ -869,6 +965,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=cr.EagerLazySpecifierSet(frozenset([cr.get_lazy_specifier("==2.0.0")])),
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -885,6 +982,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(["extra1"]),
                 specifier=cr.get_lazy_specifier_set("==2.0.0"),
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -911,6 +1009,19 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=cr.get_lazy_specifier_set("==2.0.0"),
                 marker=Marker("python_version>'2.1'"),
+                optional=None,
+            ),
+        ),
+        (
+            cr.specifier("==2.0.0"),
+            cr.optional(),
+            cr.LazyRequirement(
+                distribution=None,
+                url=None,
+                extras=frozenset(),
+                specifier=cr.get_lazy_specifier_set("==2.0.0"),
+                marker=None,
+                optional=True,
             ),
         ),
         # Specifier set
@@ -923,6 +1034,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=cr.EagerLazySpecifierSet(frozenset([cr.get_lazy_specifier("==2.0.0")])),
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -939,6 +1051,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(["extra1"]),
                 specifier=cr.get_lazy_specifier_set("==2.0.0"),
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -965,6 +1078,19 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=cr.get_lazy_specifier_set("==2.0.0"),
                 marker=Marker("python_version>'2.1'"),
+                optional=None,
+            ),
+        ),
+        (
+            cr.optional(),
+            cr.marker("python_version>'2.1'"),
+            cr.LazyRequirement(
+                distribution=None,
+                url=None,
+                extras=frozenset(),
+                specifier=None,
+                marker=Marker("python_version>'2.1'"),
+                optional=True,
             ),
         ),
         # Marker
@@ -977,6 +1103,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=None,
                 marker=Marker("python_version=='3.0'"),
+                optional=None,
             ),
         ),
         (
@@ -988,6 +1115,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=None,
                 marker=Marker("python_version=='3.0'"),
+                optional=None,
             ),
         ),
         (
@@ -999,6 +1127,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(["extra1"]),
                 specifier=None,
                 marker=Marker("python_version=='3.0'"),
+                optional=None,
             ),
         ),
         (
@@ -1010,6 +1139,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=cr.get_lazy_specifier_set(">1.5.0"),
                 marker=Marker("python_version=='3.0'"),
+                optional=None,
             ),
         ),
         (
@@ -1021,6 +1151,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=cr.get_lazy_specifier_set(">1.5.0"),
                 marker=Marker("python_version=='3.0'"),
+                optional=None,
             ),
         ),
         (
@@ -1032,6 +1163,7 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=None,
                 marker=Marker("python_version=='3.0'"),
+                optional=None,
             ),
         ),
         (
@@ -1043,7 +1175,110 @@ def test_get_lazy_requirement(requirement: cr.AnyRequirement, expected: cr.LazyR
                 extras=frozenset(),
                 specifier=None,
                 marker=Marker("python_version=='3.0' and python_version>'2.1'"),
+                optional=None,
             ),
+        ),
+        (
+            cr.marker("python_version=='3.0'"),
+            cr.optional(),
+            cr.LazyRequirement(
+                distribution=None,
+                url=None,
+                extras=frozenset(),
+                specifier=None,
+                marker=Marker("python_version=='3.0'"),
+                optional=True,
+            ),
+        ),
+        # Optional
+        (
+            cr.optional(),
+            cr.distribution("foo.bar"),
+            cr.LazyRequirement(
+                distribution="foo.bar",
+                url=None,
+                extras=frozenset(),
+                specifier=None,
+                marker=None,
+                optional=True,
+            ),
+        ),
+        (
+            cr.optional(),
+            cr.url("http://path/v1.3.0"),
+            cr.LazyRequirement(
+                distribution=None,
+                url="http://path/v1.3.0",
+                extras=frozenset(),
+                specifier=None,
+                marker=None,
+                optional=True,
+            ),
+        ),
+        (
+            cr.optional(),
+            cr.extra("extra1"),
+            cr.LazyRequirement(
+                distribution=None,
+                url=None,
+                extras=frozenset(["extra1"]),
+                specifier=None,
+                marker=None,
+                optional=True,
+            ),
+        ),
+        (
+            cr.optional(),
+            cr.specifier(">1.5.0"),
+            cr.LazyRequirement(
+                distribution=None,
+                url=None,
+                extras=frozenset(),
+                specifier=cr.get_lazy_specifier_set(">1.5.0"),
+                marker=None,
+                optional=True,
+            ),
+        ),
+        (
+            cr.optional(),
+            cr.specifier_set(">1.5.0"),
+            cr.LazyRequirement(
+                distribution=None,
+                url=None,
+                extras=frozenset(),
+                specifier=cr.get_lazy_specifier_set(">1.5.0"),
+                marker=None,
+                optional=True,
+            ),
+        ),
+        (
+            cr.optional(),
+            cr.marker("python_version=='3.0'"),
+            cr.LazyRequirement(
+                distribution=None,
+                url=None,
+                extras=frozenset(),
+                specifier=None,
+                marker=Marker("python_version=='3.0'"),
+                optional=True,
+            ),
+        ),
+        (
+            cr.optional(),
+            cr.optional(),
+            cr.LazyRequirement(
+                distribution=None,
+                url=None,
+                extras=frozenset(),
+                specifier=None,
+                marker=None,
+                optional=True,
+            ),
+        ),
+        (
+            cr.optional(),
+            cr.optional(False),
+            AssertionError,
         ),
     ],
 )
@@ -1100,6 +1335,7 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=None,
                             marker=None,
+                            optional=None,
                         )
                     ]
                 )
@@ -1116,6 +1352,7 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=cr.get_lazy_specifier_set("==1.1.0"),
                             marker=None,
+                            optional=None,
                         )
                     ]
                 )
@@ -1132,6 +1369,7 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=cr.get_lazy_specifier_set(fake_release(version="1.2.3")),
                             marker=None,
+                            optional=None,
                         ),
                     ]
                 )
@@ -1148,6 +1386,7 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=cr.get_lazy_specifier_set(fake_release(version="1.2.3")),
                             marker=None,
+                            optional=None,
                         ),
                     ]
                 )
@@ -1164,6 +1403,7 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=cr.get_lazy_specifier_set("==1.2.0"),
                             marker=None,
+                            optional=None,
                         )
                     ]
                 )
@@ -1180,6 +1420,7 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=cr.get_lazy_specifier_set("==1.3.0"),
                             marker=None,
+                            optional=None,
                         )
                     ]
                 )
@@ -1196,6 +1437,7 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=cr.get_lazy_specifier_set(">=1.4.0,<2.0.0"),
                             marker=None,
+                            optional=None,
                         )
                     ]
                 )
@@ -1212,6 +1454,26 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=cr.get_lazy_specifier_set(">=1.4.0,<2.0.0"),
                             marker=None,
+                            optional=None,
+                        )
+                    ]
+                )
+            ),
+        ),
+        (
+            cr.OptionalRequirement(
+                Requirement("foo.bar[extra]==1.5.0; python_version > '2.0.0'"), True
+            ),
+            cr.EagerLazyRequirementSet(
+                frozenset(
+                    [
+                        cr.LazyRequirement(
+                            distribution="foo.bar",
+                            url=None,
+                            extras=frozenset(["extra"]),
+                            specifier=cr.get_lazy_specifier_set("==1.5.0"),
+                            marker=Marker("python_version > '2.0.0'"),
+                            optional=True,
                         )
                     ]
                 )
@@ -1228,6 +1490,7 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(["extra"]),
                             specifier=cr.get_lazy_specifier_set("==1.5.0"),
                             marker=Marker("python_version > '2.0.0'"),
+                            optional=None,
                         )
                     ]
                 )
@@ -1240,6 +1503,7 @@ def test_compose__specifier_sets() -> None:
                 extras=frozenset(["extra"]),
                 specifier=cr.get_lazy_specifier_set("==1.7.0"),
                 marker=Marker("python_version > '2.0.0'"),
+                optional=True,
             ),
             cr.EagerLazyRequirementSet(
                 frozenset(
@@ -1250,9 +1514,38 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(["extra"]),
                             specifier=cr.get_lazy_specifier_set("==1.7.0"),
                             marker=Marker("python_version > '2.0.0'"),
+                            optional=True,
                         )
                     ]
                 )
+            ),
+        ),
+        (
+            [
+                cr.OptionalRequirement(Requirement("foo>=1.2.3"), True),
+                cr.OptionalRequirement(Requirement("bar==2.0.0"), False),
+            ],
+            cr.EagerLazyRequirementSet(
+                frozenset(
+                    [
+                        cr.LazyRequirement(
+                            distribution="foo",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=cr.get_lazy_specifier_set(">=1.2.3"),
+                            marker=None,
+                            optional=True,
+                        ),
+                        cr.LazyRequirement(
+                            distribution="bar",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=cr.get_lazy_specifier_set("==2.0.0"),
+                            marker=None,
+                            optional=False,
+                        ),
+                    ]
+                ),
             ),
         ),
         (
@@ -1269,6 +1562,7 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=cr.get_lazy_specifier_set(">=1.2.3"),
                             marker=None,
+                            optional=None,
                         ),
                         cr.LazyRequirement(
                             distribution="bar",
@@ -1276,6 +1570,35 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=cr.get_lazy_specifier_set("==2.0.0"),
                             marker=None,
+                            optional=None,
+                        ),
+                    ]
+                ),
+            ),
+        ),
+        (
+            {
+                "foo": cr.OptionalRequirement(Requirement("foo>=1.2.3"), True),
+                "bar": cr.OptionalRequirement(Requirement("bar==2.0.0"), False),
+            },
+            cr.EagerLazyRequirementSet(
+                frozenset(
+                    [
+                        cr.LazyRequirement(
+                            distribution="foo",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=cr.get_lazy_specifier_set(">=1.2.3"),
+                            marker=None,
+                            optional=True,
+                        ),
+                        cr.LazyRequirement(
+                            distribution="bar",
+                            url=None,
+                            extras=frozenset(),
+                            specifier=cr.get_lazy_specifier_set("==2.0.0"),
+                            marker=None,
+                            optional=False,
                         ),
                     ]
                 ),
@@ -1295,6 +1618,7 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=cr.get_lazy_specifier_set(">=1.2.3"),
                             marker=None,
+                            optional=None,
                         ),
                         cr.LazyRequirement(
                             distribution="bar",
@@ -1302,13 +1626,14 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=cr.get_lazy_specifier_set("==2.0.0"),
                             marker=None,
+                            optional=None,
                         ),
                     ]
                 ),
             ),
         ),
         (
-            cr.RequirementSet.new(
+            cr.get_requirement_set(
                 [
                     Requirement("foo>=1.2.3"),
                     Requirement("bar==2.0.0"),
@@ -1323,6 +1648,7 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=cr.get_lazy_specifier_set(">=1.2.3"),
                             marker=None,
+                            optional=False,
                         ),
                         cr.LazyRequirement(
                             distribution="bar",
@@ -1330,6 +1656,7 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=cr.get_lazy_specifier_set("==2.0.0"),
                             marker=None,
+                            optional=False,
                         ),
                     ]
                 ),
@@ -1345,6 +1672,7 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=cr.get_lazy_specifier_set(">=1.2.3"),
                             marker=None,
+                            optional=True,
                         ),
                         cr.LazyRequirement(
                             distribution="bar",
@@ -1352,6 +1680,7 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=cr.get_lazy_specifier_set("==2.0.0"),
                             marker=None,
+                            optional=False,
                         ),
                     ]
                 ),
@@ -1365,6 +1694,7 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=cr.get_lazy_specifier_set(">=1.2.3"),
                             marker=None,
+                            optional=True,
                         ),
                         cr.LazyRequirement(
                             distribution="bar",
@@ -1372,6 +1702,7 @@ def test_compose__specifier_sets() -> None:
                             extras=frozenset(),
                             specifier=cr.get_lazy_specifier_set("==2.0.0"),
                             marker=None,
+                            optional=False,
                         ),
                     ]
                 ),

@@ -11,10 +11,9 @@ from packaging.requirements import Requirement
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 
-from compreq.factory import make_requirement
 from compreq.levels import MINOR
 from compreq.paths import AnyPath
-from compreq.requirements import RequirementSet
+from compreq.requirements import RequirementSet, get_requirement_set, make_requirement
 from compreq.rounding import floor
 from compreq.scripts import get_distribution_metadata
 
@@ -47,7 +46,7 @@ class VirtualEnv:
         tokens = ["pip install"]
         if not deps:
             tokens.append("--no-deps")
-        tokens.extend(f'"{r}"' for r in requirement_set.values())
+        tokens.extend(f'"{r.requirement}"' for r in requirement_set.values())
         await self.run(" ".join(tokens))
 
     async def distribution_metadata(self, distribution: str) -> DistributionMetadata:
@@ -61,7 +60,7 @@ class VirtualEnv:
         return DistributionMetadata(
             distribution=distribution,
             version=version,
-            requires=RequirementSet.new(requires),
+            requires=get_requirement_set(requires),
         )
 
 

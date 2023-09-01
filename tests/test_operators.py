@@ -29,6 +29,7 @@ def test_version() -> None:
                 extras=frozenset(),
                 specifier=None,
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -39,6 +40,7 @@ def test_version() -> None:
                 extras=frozenset(),
                 specifier=None,
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -49,6 +51,7 @@ def test_version() -> None:
                 extras=frozenset(),
                 specifier=None,
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -59,6 +62,7 @@ def test_version() -> None:
                 extras=frozenset(["extra"]),
                 specifier=None,
                 marker=None,
+                optional=None,
             ),
         ),
         (
@@ -77,6 +81,18 @@ def test_version() -> None:
                 extras=frozenset(),
                 specifier=None,
                 marker=cr.get_marker("python_version=='1.2.3'"),
+                optional=None,
+            ),
+        ),
+        (
+            cr.optional(),
+            cr.LazyRequirement(
+                distribution=None,
+                url=None,
+                extras=frozenset(),
+                specifier=None,
+                marker=None,
+                optional=True,
             ),
         ),
     ],
@@ -133,7 +149,6 @@ async def test_min_ver(releases: Collection[str], expected: str) -> None:
     min_ver = cr.min_ver(release_set)
     assert "foo.bar" == min_ver.get_distribution()
     assert fake_release(version=expected) == await min_ver.resolve(context)
-    assert context.releases.called_once_with("foo.bar")
 
 
 @pytest.mark.parametrize(
@@ -153,7 +168,6 @@ async def test_max_ver(releases: Collection[str], expected: str) -> None:
     max_ver = cr.max_ver(release_set)
     assert "foo.bar" == max_ver.get_distribution()
     assert fake_release(version=expected) == await max_ver.resolve(context)
-    assert context.releases.called_once_with("foo.bar")
 
 
 @pytest.mark.parametrize(
@@ -587,7 +601,7 @@ async def test_requirements(monkeypatch: MonkeyPatch) -> None:
     context.for_distribution.return_value = dcontext
     release = fake_release(version="1.2.3")
 
-    requirements = cr.RequirementSet.new([Requirement("foo>=1.0.0"), Requirement("bar>=2.0.0")])
+    requirements = cr.get_requirement_set([Requirement("foo>=1.0.0"), Requirement("bar>=2.0.0")])
     metadata = MagicMock(cr.DistributionMetadata)
     metadata.requires = requirements
 
@@ -606,7 +620,7 @@ async def test_requirements(monkeypatch: MonkeyPatch) -> None:
     assert requirements == await lazy.resolve(context)
     context.for_distribution.assert_called_once_with("foo.bar")
     venv.install.assert_called_once_with(
-        cr.RequirementSet.new([Requirement("foo.bar==1.2.3")]), deps=False
+        cr.get_requirement_set([Requirement("foo.bar==1.2.3")]), deps=False
     )
     venv.distribution_metadata.assert_called_once_with("foo.bar")
 
@@ -614,7 +628,7 @@ async def test_requirements(monkeypatch: MonkeyPatch) -> None:
 async def test_consistent_lower_bounds(monkeypatch: MonkeyPatch) -> None:
     context = MagicMock(cr.Context)
 
-    requirement_set = cr.RequirementSet.new(
+    requirement_set = cr.get_requirement_set(
         [
             Requirement("python<4.0,>=3.9"),
             Requirement("dist1<2.0.0,>=1.2.3; python_version >= '3.10'"),
@@ -646,7 +660,7 @@ async def test_consistent_lower_bounds(monkeypatch: MonkeyPatch) -> None:
 
     lazy = cr.consistent_lower_bounds(requirement_set)
 
-    assert cr.RequirementSet.new(
+    assert cr.get_requirement_set(
         [
             Requirement("python<4.0,>=3.9"),
             Requirement("dist1<2.0.0,>=1.2.0; python_version >= '3.10'"),
@@ -656,7 +670,7 @@ async def test_consistent_lower_bounds(monkeypatch: MonkeyPatch) -> None:
         ]
     ) == await lazy.resolve(context)
     venv.install.assert_called_once_with(
-        cr.RequirementSet.new(
+        cr.get_requirement_set(
             [
                 Requirement("dist1<=1.2.3"),
                 Requirement("dist2[extra]<=2.0.0,!=2.1.1"),
@@ -671,7 +685,7 @@ async def test_consistent_lower_bounds__no_python(monkeypatch: MonkeyPatch) -> N
     context = MagicMock(cr.Context)
     context.default_python = Version("3.9")
 
-    requirement_set = cr.RequirementSet.new(
+    requirement_set = cr.get_requirement_set(
         [
             Requirement("dist1<2.0.0,>=1.2.3; python_version >= '3.10'"),
             Requirement("dist2[extra]>=2.0.0,!=2.1.1"),
@@ -702,7 +716,7 @@ async def test_consistent_lower_bounds__no_python(monkeypatch: MonkeyPatch) -> N
 
     lazy = cr.consistent_lower_bounds(requirement_set)
 
-    assert cr.RequirementSet.new(
+    assert cr.get_requirement_set(
         [
             Requirement("dist1<2.0.0,>=1.2.0; python_version >= '3.10'"),
             Requirement("dist2[extra]>=1.12.0,!=2.1.1"),
@@ -711,7 +725,7 @@ async def test_consistent_lower_bounds__no_python(monkeypatch: MonkeyPatch) -> N
         ]
     ) == await lazy.resolve(context)
     venv.install.assert_called_once_with(
-        cr.RequirementSet.new(
+        cr.get_requirement_set(
             [
                 Requirement("dist1<=1.2.3"),
                 Requirement("dist2[extra]<=2.0.0,!=2.1.1"),
