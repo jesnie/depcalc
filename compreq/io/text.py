@@ -9,7 +9,7 @@ from typing_extensions import Self
 
 from compreq.lazy import AnyRequirementSet
 from compreq.paths import AnyPath
-from compreq.requirements import RequirementSet
+from compreq.requirements import RequirementSet, get_requirement_set
 from compreq.roots import CompReq
 
 
@@ -35,7 +35,7 @@ class TextRequirementsFile:
                     if line.startswith("#"):
                         continue
                     requirements.append(Requirement(line))
-        self.requirements = RequirementSet.new(requirements)
+        self.requirements = get_requirement_set(requirements)
 
     def close(self) -> None:
         self.path.write_text(str(self), encoding="utf-8")
@@ -58,4 +58,4 @@ class TextRequirementsFile:
         self.requirements = cr.resolve_requirement_set(requirement_set)
 
     def __str__(self) -> str:
-        return "\n".join(str(r) for r in self.requirements.values()) + "\n"
+        return "\n".join(str(r.requirement) for r in self.requirements.values()) + "\n"

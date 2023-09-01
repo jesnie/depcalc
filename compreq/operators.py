@@ -12,7 +12,6 @@ from packaging.version import Version
 
 from compreq.bounds import get_bounds
 from compreq.contexts import Context, DistributionContext
-from compreq.factory import make_requirement
 from compreq.lazy import (
     EMPTY_REQUIREMENT,
     AllLazyReleaseSet,
@@ -40,7 +39,12 @@ from compreq.lazy import (
 )
 from compreq.levels import AnyLevel, IntLevel, Level, get_level
 from compreq.releases import Release, ReleaseSet
-from compreq.requirements import RequirementSet
+from compreq.requirements import (
+    OptionalRequirement,
+    RequirementSet,
+    get_requirement_set,
+    make_requirement,
+)
 from compreq.rounding import ceil, floor
 from compreq.time import UtcDatetime
 from compreq.versiontokens import VersionToken
@@ -131,6 +135,19 @@ def marker(value: AnyMarker) -> LazyRequirement:
         dist("compreq") & marker("platform_system != 'Darwin' or platform_machine != 'arm64'")
     """
     return replace(EMPTY_REQUIREMENT, marker=get_marker(value))
+
+
+def optional(value: bool = True) -> LazyRequirement:
+    """
+    Marks this requirment as "optional".
+
+    Currently only used by poetry.
+
+    Example::
+
+        dist("compreq") & optional()
+    """
+    return replace(EMPTY_REQUIREMENT, optional=value)
 
 
 def releases(distribution: str | None = None) -> LazyReleaseSet:
@@ -569,7 +586,7 @@ class RequirementsLazyRequirementSet(LazyRequirementSet):
         assert len(releases) == 1, releases
         (release,) = releases.releases
         requirement = Requirement(f"{release.distribution}=={release.version}")
-        requirement_set = RequirementSet.new([requirement])
+        requirement_set = get_requirement_set(requirement)
 
         async with temp_venv(python_version) as venv:
             await venv.install(requirement_set, deps=False)
@@ -602,7 +619,7 @@ class ConsistentLowerBoundsLazyRequirementSet(LazyRequirementSet):
         bounds = {}
         result = []
         upper_bounds = []
-        python: Requirement | None = None
+        python: OptionalRequirement | None = None
         for requirement in requirement_set.values():
             distribution = requirement.name
             if distribution == "python":
@@ -631,9 +648,9 @@ class ConsistentLowerBoundsLazyRequirementSet(LazyRequirementSet):
             python_version = context.default_python
 
         async with temp_venv(python_version) as venv:
-            await venv.install(RequirementSet.new(result + upper_bounds))
+            await venv.install(get_requirement_set(result + upper_bounds))
 
-            async def _get_requirement(ub: Requirement) -> Requirement:
+            async def _get_requirement(ub: OptionalRequirement) -> OptionalRequirement:
                 distribution = ub.name
                 b = bounds[distribution]
                 assert b.lower, b
@@ -647,7 +664,7 @@ class ConsistentLowerBoundsLazyRequirementSet(LazyRequirementSet):
         if python:
             result.append(python)
 
-        return RequirementSet.new(result)
+        return get_requirement_set(result)
 
 
 def consistent_lower_bounds(requirement_set: AnyRequirementSet) -> LazyRequirementSet:

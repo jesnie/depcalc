@@ -13,14 +13,7 @@ from unittest.mock import MagicMock
 
 from packaging.requirements import Requirement
 
-from compreq import (
-    CompReq,
-    Context,
-    PoetryPyprojectFile,
-    RequirementSet,
-    get_lazy_release_set,
-    get_lazy_requirement_set,
-)
+import compreq as cr
 from tests.utils import fake_release_set
 
 PYPROJECT_CONTENTS = """
@@ -29,20 +22,21 @@ name = "compreq"
 version = "0.1.0"
 
 [tool.poetry.dependencies]
-pack1 = "!=1.2.5,<2.0.0,>=1.2.3"
-pack2 = "<=1.9.0,>1.2.3"
-pack3 = "==1.2.5"
-pack4 = "~1.2"
-pack5 = "^1.2.3"
-pack6 = "^0.1.0"
-packextra = {extras = ["extra1", "extra2"], version = "^1.2.3"}
-packgit = {git = "https://github.com/pack6/pack6"}
-packmarker = {version = ">=1.2.3", markers = "platform_system != \\"Darwin\\" or platform_machine != 'arm64'"}
-packpath = {path = "/home/compreq"}
-packurl = {url = "http://www.test.com/test/pack7-1.2.3.tar.gz"}
+dist1 = "!=1.2.5,<2.0.0,>=1.2.3"
+dist2 = "<=1.9.0,>1.2.3"
+dist3 = "==1.2.5"
+dist4 = "~1.2"
+dist5 = "^1.2.3"
+dist6 = "^0.1.0"
+distextra = {extras = ["extra1", "extra2"], version = "^1.2.3"}
+distgit = {git = "https://github.com/dist6/dist6"}
+distmarker = {version = ">=1.2.3", markers = "platform_system != \\"Darwin\\" or platform_machine != 'arm64'"}
+distoptional = {optional = true, version = ">=1.2.3"}
+distpath = {path = "/home/compreq"}
+disturl = {url = "http://www.test.com/test/dist7-1.2.3.tar.gz"}
 
 [tool.poetry.group.dev.dependencies]
-pack-dev1 = "<2.0.0,>=1.2.3"
+dist-dev1 = "<2.0.0,>=1.2.3"
 """
 
 PYPROJECT_CONTENTS_AFTER = """
@@ -51,43 +45,43 @@ name = "compreq"
 version = "0.1.0"
 
 [tool.poetry.dependencies]
-pack1 = "!=1.2.5,<2.0.0,>=1.2.3"
-pack2 = "<=1.9.0,>1.2.3"
-pack3 = "==1.2.5"
-pack4 = "~1.2"
-pack5 = "<2.0.0,>=1.2.3"
-pack6 = "<0.2.0,>=0.1.0"
-packextra = {extras = ["extra1", "extra2"], version = "<2.0.0,>=1.2.3"}
-packgit = {git = "https://github.com/pack6/pack6"}
-packmarker = {version = ">=1.2.3", markers = "platform_system != \\"Darwin\\" or platform_machine != \\"arm64\\""}
-packpath = {path = "/home/compreq"}
-packurl = {url = "http://www.test.com/test/pack7-1.2.3.tar.gz"}
+dist1 = "!=1.2.5,<2.0.0,>=1.2.3"
+dist2 = "<=1.9.0,>1.2.3"
+dist3 = "==1.2.5"
+dist4 = "~1.2"
+dist5 = "<2.0.0,>=1.2.3"
+dist6 = "<0.2.0,>=0.1.0"
+distextra = {extras = ["extra1", "extra2"], version = "<2.0.0,>=1.2.3"}
+distgit = {git = "https://github.com/dist6/dist6"}
+distmarker = {version = ">=1.2.3", markers = "platform_system != \\"Darwin\\" or platform_machine != \\"arm64\\""}
+distoptional = {version = ">=1.2.3", optional = true}
+distpath = {path = "/home/compreq"}
+disturl = {url = "http://www.test.com/test/dist7-1.2.3.tar.gz"}
 
 [tool.poetry.group.dev.dependencies]
-pack-dev1 = "<2.0.0,>=1.2.3"
+dist-dev1 = "<2.0.0,>=1.2.3"
 """
 
-MAIN_REQUIREMENTS = RequirementSet.new(
+MAIN_REQUIREMENTS = cr.get_requirement_set(
     [
-        Requirement("pack1!=1.2.5,<2.0.0,>=1.2.3"),
-        Requirement("pack2<=1.9.0,>1.2.3"),
-        Requirement("pack3==1.2.5"),
-        Requirement("pack4~=1.2"),
-        Requirement("pack5<2.0.0,>=1.2.3"),
-        Requirement("pack6<0.2.0,>=0.1.0"),
-        Requirement("packextra[extra1, extra2]<2.0.0,>=1.2.3"),
-        Requirement("packurl@http://www.test.com/test/pack7-1.2.3.tar.gz"),
-        Requirement("packpath@file:///home/compreq"),
-        Requirement("packgit@git+https://github.com/pack6/pack6"),
-        Requirement(
-            "packmarker>=1.2.3; platform_system != 'Darwin' or platform_machine != 'arm64'"
-        ),
+        "dist1!=1.2.5,<2.0.0,>=1.2.3",
+        "dist2<=1.9.0,>1.2.3",
+        "dist3==1.2.5",
+        "dist4~=1.2",
+        "dist5<2.0.0,>=1.2.3",
+        "dist6<0.2.0,>=0.1.0",
+        "distextra[extra1, extra2]<2.0.0,>=1.2.3",
+        "disturl@http://www.test.com/test/dist7-1.2.3.tar.gz",
+        "distpath@file:///home/compreq",
+        "distgit@git+https://github.com/dist6/dist6",
+        "distmarker>=1.2.3; platform_system != 'Darwin' or platform_machine != 'arm64'",
+        cr.OptionalRequirement(Requirement("distoptional>=1.2.3"), optional=True),
     ]
 )
 
-DEV_REQUIREMENTS = RequirementSet.new(
+DEV_REQUIREMENTS = cr.get_requirement_set(
     [
-        Requirement("pack-dev1<2.0.0,>=1.2.3"),
+        "dist-dev1<2.0.0,>=1.2.3",
     ]
 )
 
@@ -96,7 +90,7 @@ def test_poetry_pyproject_file__get_requirements(tmp_path: Path) -> None:
     pyproject_path = tmp_path / "pyproject.toml"
     pyproject_path.write_text(PYPROJECT_CONTENTS)
 
-    with PoetryPyprojectFile.open(pyproject_path) as pyproject:
+    with cr.PoetryPyprojectFile.open(pyproject_path) as pyproject:
         assert MAIN_REQUIREMENTS == pyproject.get_requirements()
         assert DEV_REQUIREMENTS == pyproject.get_requirements("dev")
 
@@ -115,11 +109,11 @@ version = "0.1.0"
 """
     )
 
-    with PoetryPyprojectFile.open(pyproject_path) as pyproject:
-        compreq = MagicMock(CompReq)
-        compreq.context = MagicMock(Context)
+    with cr.PoetryPyprojectFile.open(pyproject_path) as pyproject:
+        compreq = MagicMock(cr.CompReq)
+        compreq.context = MagicMock(cr.Context)
         compreq.resolve_requirement_set.side_effect = lambda r: asyncio.run(
-            get_lazy_requirement_set(r).resolve(compreq.context)
+            cr.get_lazy_requirement_set(r).resolve(compreq.context)
         )
 
         pyproject.set_requirements(
@@ -146,7 +140,7 @@ classifiers = [
 """
     )
 
-    with PoetryPyprojectFile.open(pyproject_path) as pyproject:
+    with cr.PoetryPyprojectFile.open(pyproject_path) as pyproject:
         assert ["test1", "test2", "test3"] == pyproject.get_classifiers()
 
 
@@ -164,7 +158,7 @@ classifiers = [
 """
     )
 
-    with PoetryPyprojectFile.open(pyproject_path) as pyproject:
+    with cr.PoetryPyprojectFile.open(pyproject_path) as pyproject:
         pyproject.set_classifiers(["test1", "test2", "test3"])
 
     assert (
@@ -200,7 +194,7 @@ classifiers = [
 """
     )
 
-    cr = MagicMock(CompReq)
+    comp_req = MagicMock(cr.CompReq)
     python_releases = fake_release_set(
         distribution="python",
         releases=[
@@ -215,11 +209,11 @@ classifiers = [
             "3.1.2",
         ],
     )
-    lazy_python_releases = get_lazy_release_set(python_releases)
-    cr.resolve_release_set.return_value = python_releases
+    lazy_python_releases = cr.get_lazy_release_set(python_releases)
+    comp_req.resolve_release_set.return_value = python_releases
 
-    with PoetryPyprojectFile.open(pyproject_path) as pyproject:
-        pyproject.set_python_classifiers(cr, lazy_python_releases)
+    with cr.PoetryPyprojectFile.open(pyproject_path) as pyproject:
+        pyproject.set_python_classifiers(comp_req, lazy_python_releases)
 
     assert (
         """
@@ -240,4 +234,4 @@ classifiers = [
 """
         == pyproject_path.read_text()
     )
-    cr.resolve_release_set.assert_called_once_with("python", lazy_python_releases)
+    comp_req.resolve_release_set.assert_called_once_with("python", lazy_python_releases)

@@ -15,7 +15,7 @@ from compreq import (
     LazySpecifier,
     LazySpecifierSet,
     LazyVersion,
-    RequirementSet,
+    get_requirement_set,
 )
 from tests.utils import fake_release, fake_release_set
 
@@ -130,7 +130,9 @@ def test_comp_req__resolve_requirement() -> None:
 def test_comp_req__resolve_requirement_set() -> None:
     context = MagicMock(Context)
 
-    requirement_set = RequirementSet.new([Requirement("foo.bar~=1.2.3"), Requirement("baz==2.0.0")])
+    requirement_set = get_requirement_set(
+        [Requirement("foo.bar~=1.2.3"), Requirement("baz==2.0.0")]
+    )
     lazy = MagicMock(LazyRequirementSet)
     lazy.resolve.return_value = requirement_set
 

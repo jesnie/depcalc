@@ -127,7 +127,7 @@ async def test_virtual_env__install(_mock_run: MagicMock) -> None:
     venv = cr.VirtualEnv("/home/jesper/venv")
 
     await venv.install(
-        cr.RequirementSet.new(
+        cr.get_requirement_set(
             [
                 Requirement("foo>=1.2.3"),
                 Requirement("bar<2.0,>=1.0"),
@@ -146,7 +146,7 @@ async def test_virtual_env__install__no_deps(_mock_run: MagicMock) -> None:
     venv = cr.VirtualEnv("/home/jesper/venv")
 
     await venv.install(
-        cr.RequirementSet.new(
+        cr.get_requirement_set(
             [
                 Requirement("foo>=1.2.3"),
                 Requirement("bar<2.0,>=1.0"),
@@ -178,7 +178,7 @@ async def test_virtual_env__distribution_metadata(_mock_run: MagicMock) -> None:
     assert cr.DistributionMetadata(
         distribution="foo.bar",
         version=Version("1.2.3"),
-        requires=cr.RequirementSet.new(
+        requires=cr.get_requirement_set(
             [
                 Requirement("python<4.0,>=3.9"),
                 Requirement("foo>=1.2.3"),

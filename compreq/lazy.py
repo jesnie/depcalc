@@ -15,7 +15,11 @@ from packaging.version import Version
 
 from compreq.contexts import Context, DistributionContext
 from compreq.releases import Release, ReleaseSet
-from compreq.requirements import RequirementSet
+from compreq.requirements import (
+    OptionalRequirement,
+    RequirementSet,
+    get_requirement_set,
+)
 
 
 class LazyRelease(ABC):
@@ -185,6 +189,7 @@ AnyReleaseSet: TypeAlias = Union[
     SpecifierSet,
     "LazySpecifierSet",
     Requirement,
+    OptionalRequirement,
     "LazyRequirement",
     Release,
     LazyRelease,
@@ -207,7 +212,7 @@ def get_lazy_release_set(release_set: AnyReleaseSet | None) -> LazyReleaseSet:
             ProdLazyReleaseSet(AllLazyReleaseSet(None)),
             release_set,
         )
-    if isinstance(release_set, Requirement):
+    if isinstance(release_set, (OptionalRequirement, Requirement)):
         release_set = get_lazy_requirement(release_set)
     if isinstance(release_set, LazyRequirement):
         if release_set.specifier:
@@ -332,7 +337,7 @@ class LazySpecifier(ABC):
         ...
 
     @overload
-    def __and__(self, rhs: Requirement | LazyRequirement) -> LazyRequirement:
+    def __and__(self, rhs: OptionalRequirement | Requirement | LazyRequirement) -> LazyRequirement:
         ...
 
     def __and__(self, rhs: AnyRequirement) -> LazySpecifierSet | LazyRequirement:
@@ -343,7 +348,7 @@ class LazySpecifier(ABC):
         ...
 
     @overload
-    def __rand__(self, lhs: Requirement | LazyRequirement) -> LazyRequirement:
+    def __rand__(self, lhs: OptionalRequirement | Requirement | LazyRequirement) -> LazyRequirement:
         ...
 
     def __rand__(self, lhs: AnyRequirement) -> LazySpecifierSet | LazyRequirement:
@@ -411,7 +416,7 @@ class LazySpecifierSet(ABC):
         ...
 
     @overload
-    def __and__(self, rhs: Requirement | LazyRequirement) -> LazyRequirement:
+    def __and__(self, rhs: OptionalRequirement | Requirement | LazyRequirement) -> LazyRequirement:
         ...
 
     def __and__(self, rhs: AnyRequirement) -> LazySpecifierSet | LazyRequirement:
@@ -422,7 +427,7 @@ class LazySpecifierSet(ABC):
         ...
 
     @overload
-    def __rand__(self, lhs: Requirement | LazyRequirement) -> LazyRequirement:
+    def __rand__(self, lhs: OptionalRequirement | Requirement | LazyRequirement) -> LazyRequirement:
         ...
 
     def __rand__(self, lhs: AnyRequirement) -> LazySpecifierSet | LazyRequirement:
@@ -526,6 +531,13 @@ class LazyRequirement:
     marker: Marker | None
     """Marker for specifying when this requirement should be used."""
 
+    optional: bool | None
+    """
+    Whether this requirement is optional.
+
+    Currently only used by Poetry.
+    """
+
     def __post_init__(self) -> None:
         assert (self.url is None) or (self.specifier is None), (
             "A requirement cannot have both a url and a specifier."
@@ -543,7 +555,7 @@ class LazyRequirement:
             self.distribution
         ), f"A requirement must have the distribution name set. Found: {self.distribution}."
 
-    async def resolve(self, context: Context) -> Requirement:
+    async def resolve(self, context: Context) -> OptionalRequirement:
         """Compute the `Requirement`."""
         self.assert_valid()
         assert self.distribution
@@ -571,7 +583,9 @@ class LazyRequirement:
         if self.marker:
             tokens.append(f"; {self.marker}")
 
-        return Requirement("".join(tokens))
+        optional = self.optional or False
+
+        return OptionalRequirement(Requirement("".join(tokens)), optional)
 
 
 EMPTY_REQUIREMENT: Final[LazyRequirement] = LazyRequirement(
@@ -580,6 +594,7 @@ EMPTY_REQUIREMENT: Final[LazyRequirement] = LazyRequirement(
     extras=frozenset(),
     specifier=None,
     marker=None,
+    optional=None,
 )
 """
 A `LazyRequirement` without any values set.
@@ -601,6 +616,7 @@ AnyRequirement: TypeAlias = (
     | LazySpecifier
     | SpecifierSet
     | LazySpecifierSet
+    | OptionalRequirement
     | Requirement
     | LazyRequirement
 )
@@ -625,6 +641,17 @@ def get_lazy_requirement(requirement: AnyRequirement) -> LazyRequirement:
         requirement = get_lazy_specifier_set(requirement)
     if isinstance(requirement, LazySpecifierSet):
         requirement = replace(EMPTY_REQUIREMENT, specifier=requirement)
+    if isinstance(requirement, OptionalRequirement):
+        requirement = LazyRequirement(
+            distribution=requirement.name,
+            url=requirement.url,
+            extras=frozenset(requirement.extras),
+            specifier=get_lazy_specifier_set(requirement.specifier)
+            if requirement.specifier
+            else None,
+            marker=requirement.marker,
+            optional=requirement.optional,
+        )
     if isinstance(requirement, Requirement):
         requirement = LazyRequirement(
             distribution=requirement.name,
@@ -634,6 +661,7 @@ def get_lazy_requirement(requirement: AnyRequirement) -> LazyRequirement:
             if requirement.specifier
             else None,
             marker=requirement.marker,
+            optional=None,
         )
     if isinstance(requirement, LazyRequirement):
         return requirement
@@ -650,14 +678,16 @@ def compose(
 
 @overload
 def compose(
-    lhs: AnyRequirement, rhs: Release | LazyRelease | Requirement | LazyRequirement
+    lhs: AnyRequirement,
+    rhs: Release | LazyRelease | OptionalRequirement | Requirement | LazyRequirement,
 ) -> LazyRequirement:
     ...
 
 
 @overload
 def compose(
-    lhs: Release | LazyRelease | Requirement | LazyRequirement, rhs: AnyRequirement
+    lhs: Release | LazyRelease | OptionalRequirement | Requirement | LazyRequirement,
+    rhs: AnyRequirement,
 ) -> LazyRequirement:
     ...
 
@@ -671,9 +701,9 @@ def compose(lhs: AnyRequirement, rhs: AnyRequirement) -> LazySpecifierSet | Lazy
     argument is a requirement the result is a `LazySpecifierSet`.
 
     """
-    if isinstance(lhs, (Requirement, LazyRequirement)) or isinstance(
-        rhs, (Requirement, LazyRequirement)
-    ):
+    if isinstance(
+        lhs, (Release, LazyRelease, OptionalRequirement, Requirement, LazyRequirement)
+    ) or isinstance(rhs, (Release, LazyRelease, OptionalRequirement, Requirement, LazyRequirement)):
         lhr = get_lazy_requirement(lhs)
         rhr = get_lazy_requirement(rhs)
 
@@ -685,18 +715,22 @@ def compose(lhs: AnyRequirement, rhs: AnyRequirement) -> LazySpecifierSet | Lazy
             "A requirement can have at most one distribution name."
             f" Found: {lhr.distribution} and {rhr.distribution}."
         )
+        distribution = lhr.distribution or rhr.distribution
+
         assert (
             lhr.url is None or rhr.url is None or lhr.url == rhr.url
         ), f"A requirement can have at most one url. Found: {lhr.url} and {rhr.url}."
-        distribution = lhr.distribution or rhr.distribution
         url = lhr.url or rhr.url
+
         extras = frozenset(chain(lhr.extras, rhr.extras))
+
         if lhr.specifier is None:
             specifier = rhr.specifier
         elif rhr.specifier is None:
             specifier = lhr.specifier
         else:
             specifier = compose(lhr.specifier, rhr.specifier)
+
         marker: Marker | None
         if lhr.marker is None:
             marker = rhr.marker
@@ -706,12 +740,19 @@ def compose(lhs: AnyRequirement, rhs: AnyRequirement) -> LazySpecifierSet | Lazy
             marker = lhr.marker
         else:
             marker = Marker(f"({lhr.marker}) and ({rhr.marker})")
+
+        assert (
+            lhr.optional is None or rhr.optional is None or lhr.optional == rhr.optional
+        ), f"A requirement can have at most one optional. Found: {lhr.optional} and {rhr.optional}."
+        optional = lhr.optional or rhr.optional
+
         return LazyRequirement(
             distribution=distribution,
             url=url,
             extras=extras,
             specifier=specifier,
             marker=marker,
+            optional=optional,
         )
     else:
         lhss = get_lazy_specifier_set(lhs)
@@ -748,7 +789,7 @@ class EagerLazyRequirementSet(LazyRequirementSet):
 
     async def resolve(self, context: Context) -> RequirementSet:
         requirements = await asyncio.gather(*[r.resolve(context) for r in self.requirements])
-        return RequirementSet.new(requirements)
+        return get_requirement_set(requirements)
 
 
 AnyRequirementSet: TypeAlias = (
@@ -759,6 +800,7 @@ AnyRequirementSet: TypeAlias = (
     | LazySpecifier
     | SpecifierSet
     | LazySpecifierSet
+    | OptionalRequirement
     | Requirement
     | LazyRequirement
     | Mapping[str, AnyRequirement]
@@ -781,6 +823,7 @@ def get_lazy_requirement_set(requirement_set: AnyRequirementSet) -> LazyRequirem
             LazySpecifier,
             SpecifierSet,
             LazySpecifierSet,
+            OptionalRequirement,
             Requirement,
         ),
     ):

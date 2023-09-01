@@ -11,7 +11,11 @@ from compreq.classifiers import set_python_classifiers
 from compreq.io.pyproject import PyprojectFile
 from compreq.lazy import AnyReleaseSet, AnyRequirementSet
 from compreq.levels import REL_MAJOR
-from compreq.requirements import RequirementSet
+from compreq.requirements import (
+    OptionalRequirement,
+    RequirementSet,
+    get_requirement_set,
+)
 from compreq.roots import CompReq
 from compreq.rounding import ceil
 
@@ -30,36 +34,39 @@ class PoetryPyprojectFile(PyprojectFile):
         """
         Get the given `group` of requirements. If `group` is `None` the main group is returned.
         """
-        return RequirementSet.new(
+        return get_requirement_set(
             self._parse_requirement(distribution, toml)
             for distribution, toml in self._get_dependencies(group).items()
         )
 
-    def _parse_requirement(self, distribution: str, toml: Any) -> Requirement:
-        result = Requirement.__new__(Requirement)
-        result.name = distribution
-        result.url = None
-        result.extras = set()
-        result.specifier = SpecifierSet()
-        result.marker = None
+    def _parse_requirement(self, distribution: str, toml: Any) -> OptionalRequirement:
+        requirement = Requirement.__new__(Requirement)
+        requirement.name = distribution
+        requirement.url = None
+        requirement.extras = set()
+        requirement.specifier = SpecifierSet()
+        requirement.marker = None
+        optional = False
 
         if isinstance(toml, dict):
             if "url" in toml:
-                result.url = toml["url"]
+                requirement.url = toml["url"]
             if "path" in toml:
-                result.url = f"file://{toml['path']}"
+                requirement.url = f"file://{toml['path']}"
             if "git" in toml:
-                result.url = f"git+{toml['git']}"
+                requirement.url = f"git+{toml['git']}"
             if "extras" in toml:
-                result.extras = set(toml["extras"])
+                requirement.extras = set(toml["extras"])
             if "version" in toml:
-                result.specifier = self._parse_specifier_set(toml["version"])
+                requirement.specifier = self._parse_specifier_set(toml["version"])
             if "markers" in toml:
-                result.marker = Marker(toml["markers"])
+                requirement.marker = Marker(toml["markers"])
+            if "optional" in toml:
+                optional = toml["optional"]
         else:
-            result.specifier = self._parse_specifier_set(toml)
+            requirement.specifier = self._parse_specifier_set(toml)
 
-        return result
+        return OptionalRequirement(requirement, optional)
 
     def _parse_specifier_set(self, specifier_set: str) -> SpecifierSet:
         result = SpecifierSet()
@@ -89,7 +96,7 @@ class PoetryPyprojectFile(PyprojectFile):
         for r in requirements.values():
             requirements_toml[r.name] = self._format_requirement(r)
 
-    def _format_requirement(self, requirement: Requirement) -> Any:
+    def _format_requirement(self, requirement: OptionalRequirement) -> Any:
         result = inline_table()
 
         if requirement.url is not None:
@@ -106,6 +113,8 @@ class PoetryPyprojectFile(PyprojectFile):
             result["version"] = self._format_specifier_set(requirement.specifier)
         if requirement.marker is not None:
             result["markers"] = str(requirement.marker)
+        if requirement.optional:
+            result["optional"] = requirement.optional
 
         return result if list(result) != ["version"] else result["version"]
 
