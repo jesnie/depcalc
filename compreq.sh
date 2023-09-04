@@ -20,7 +20,7 @@ if [[ $(git status --porcelain) ]]; then
     git push origin +compreq
     gh pr create \
        --title "Update requirements" \
-       --body "Automatic update of requirements."
+       --body "Automatic update of requirements." \
        --reviewer jesnie
     false
 fi
