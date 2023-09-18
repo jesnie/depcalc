@@ -4,7 +4,7 @@ on:
   schedule:
     # * is a special character in YAML so you have to quote this string
     # 10:17 every Monday - A compromise between random and a convenient time:
-    - cron: '17 10 * * 1'
+    - cron: '17 10 * * *'
 
 env:
   GH_TOKEN: ${{ github.token }}

@@ -18,6 +18,7 @@ if [[ $(git status --porcelain) ]]; then
         commit \
         -am "Update requirements."
     git push origin +compreq
+    gh workflow run .github/workflows/test_release.yml --ref compreq
     gh pr create \
        --title "Update requirements" \
        --body "Automatic update of requirements." \
