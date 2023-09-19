@@ -14,6 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          # See: https://github.com/peter-evans/create-pull-request/blob/main/docs/concepts-guidelines.md#push-using-ssh-deploy-keys
+          ssh-key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
       - uses: actions/setup-python@v4
         with:
           python-version: "3.10"
