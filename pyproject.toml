@@ -30,7 +30,7 @@ typing-extensions = "<5,>=4.3.0"
 virtualenv = "<21,>=20.16.0"
 
 [tool.poetry.group.dev.dependencies]
-black = "<23.8,>=23.7"
+black = "<23.10,>=23.9"
 isort = "<5.13,>=5.12"
 mypy = "<1.6,>=1.5"
 pylint = "<2.18,>=2.17"
