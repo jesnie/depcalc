@@ -1,6 +1,6 @@
 #!/bin/env bash
 
-set -e
+set -xe
 
 git fetch origin main
 git checkout main
