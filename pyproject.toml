@@ -84,6 +84,7 @@ disable = [
   "no-else-return",
   "no-member",
   "too-few-public-methods",
+  "too-many-arguments",
   "too-many-branches",
   "too-many-lines",
   "too-many-locals",
