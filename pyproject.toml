@@ -21,7 +21,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 beautifulsoup4 = "<5,>=4.10.0"
-packaging = "<24,>=22.0"
+packaging = "<24,>=23.0"
 pip = "<24,>=22.3"
 python = "<4,>=3.10"
 python-dateutil = "<3,>=2.6.0"
