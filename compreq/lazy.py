@@ -333,23 +333,23 @@ class LazySpecifier(ABC):
         """Compute the `Specifier`."""
 
     @overload
-    def __and__(self, rhs: AnySpecifierSet) -> LazySpecifierSet:
-        ...
+    def __and__(self, rhs: AnySpecifierSet) -> LazySpecifierSet: ...
 
     @overload
-    def __and__(self, rhs: OptionalRequirement | Requirement | LazyRequirement) -> LazyRequirement:
-        ...
+    def __and__(
+        self, rhs: OptionalRequirement | Requirement | LazyRequirement
+    ) -> LazyRequirement: ...
 
     def __and__(self, rhs: AnyRequirement) -> LazySpecifierSet | LazyRequirement:
         return compose(self, rhs)
 
     @overload
-    def __rand__(self, lhs: AnySpecifierSet) -> LazySpecifierSet:
-        ...
+    def __rand__(self, lhs: AnySpecifierSet) -> LazySpecifierSet: ...
 
     @overload
-    def __rand__(self, lhs: OptionalRequirement | Requirement | LazyRequirement) -> LazyRequirement:
-        ...
+    def __rand__(
+        self, lhs: OptionalRequirement | Requirement | LazyRequirement
+    ) -> LazyRequirement: ...
 
     def __rand__(self, lhs: AnyRequirement) -> LazySpecifierSet | LazyRequirement:
         return compose(lhs, self)
@@ -412,23 +412,23 @@ class LazySpecifierSet(ABC):
         """Compute the `SpecifierSet`."""
 
     @overload
-    def __and__(self, rhs: AnySpecifierSet) -> LazySpecifierSet:
-        ...
+    def __and__(self, rhs: AnySpecifierSet) -> LazySpecifierSet: ...
 
     @overload
-    def __and__(self, rhs: OptionalRequirement | Requirement | LazyRequirement) -> LazyRequirement:
-        ...
+    def __and__(
+        self, rhs: OptionalRequirement | Requirement | LazyRequirement
+    ) -> LazyRequirement: ...
 
     def __and__(self, rhs: AnyRequirement) -> LazySpecifierSet | LazyRequirement:
         return compose(self, rhs)
 
     @overload
-    def __rand__(self, lhs: AnySpecifierSet) -> LazySpecifierSet:
-        ...
+    def __rand__(self, lhs: AnySpecifierSet) -> LazySpecifierSet: ...
 
     @overload
-    def __rand__(self, lhs: OptionalRequirement | Requirement | LazyRequirement) -> LazyRequirement:
-        ...
+    def __rand__(
+        self, lhs: OptionalRequirement | Requirement | LazyRequirement
+    ) -> LazyRequirement: ...
 
     def __rand__(self, lhs: AnyRequirement) -> LazySpecifierSet | LazyRequirement:
         return compose(lhs, self)
@@ -646,9 +646,9 @@ def get_lazy_requirement(requirement: AnyRequirement) -> LazyRequirement:
             distribution=requirement.name,
             url=requirement.url,
             extras=frozenset(requirement.extras),
-            specifier=get_lazy_specifier_set(requirement.specifier)
-            if requirement.specifier
-            else None,
+            specifier=(
+                get_lazy_specifier_set(requirement.specifier) if requirement.specifier else None
+            ),
             marker=requirement.marker,
             optional=requirement.optional,
         )
@@ -657,9 +657,9 @@ def get_lazy_requirement(requirement: AnyRequirement) -> LazyRequirement:
             distribution=requirement.name,
             url=requirement.url,
             extras=frozenset(requirement.extras),
-            specifier=get_lazy_specifier_set(requirement.specifier)
-            if requirement.specifier
-            else None,
+            specifier=(
+                get_lazy_specifier_set(requirement.specifier) if requirement.specifier else None
+            ),
             marker=requirement.marker,
             optional=None,
         )
@@ -672,24 +672,21 @@ def get_lazy_requirement(requirement: AnyRequirement) -> LazyRequirement:
 def compose(
     lhs: str | Specifier | LazySpecifier | SpecifierSet | LazySpecifierSet,
     rhs: str | Specifier | LazySpecifier | SpecifierSet | LazySpecifierSet,
-) -> LazySpecifierSet:
-    ...
+) -> LazySpecifierSet: ...
 
 
 @overload
 def compose(
     lhs: AnyRequirement,
     rhs: Release | LazyRelease | OptionalRequirement | Requirement | LazyRequirement,
-) -> LazyRequirement:
-    ...
+) -> LazyRequirement: ...
 
 
 @overload
 def compose(
     lhs: Release | LazyRelease | OptionalRequirement | Requirement | LazyRequirement,
     rhs: AnyRequirement,
-) -> LazyRequirement:
-    ...
+) -> LazyRequirement: ...
 
 
 def compose(lhs: AnyRequirement, rhs: AnyRequirement) -> LazySpecifierSet | LazyRequirement:

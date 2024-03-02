@@ -37,8 +37,7 @@ class CompReq:
         *,
         default_python: Version | str | None = None,
         context: Context,
-    ) -> NoReturn:
-        ...
+    ) -> NoReturn: ...
 
     @overload
     def __init__(
@@ -47,8 +46,7 @@ class CompReq:
         *,
         default_python: Version | str | None = None,
         context: None = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     def __init__(
@@ -57,8 +55,7 @@ class CompReq:
         *,
         default_python: None = None,
         context: Context,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     def __init__(
@@ -67,8 +64,7 @@ class CompReq:
         *,
         default_python: None = None,
         context: None = None,
-    ) -> NoReturn:
-        ...
+    ) -> NoReturn: ...
 
     def __init__(
         self,
